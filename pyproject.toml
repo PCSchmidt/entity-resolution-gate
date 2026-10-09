@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "entity-resolution-gate"
+version = "0.1.0"
+description = "Entity resolution with graph-gated fusion: blocking, pairwise scoring, and hard deterministic constraints that no similarity score can override."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "PCSchmidt" }]
+dependencies = ["polars>=1.0", "duckdb>=1.0", "networkx>=3.2", "rapidfuzz>=3.6", "jellyfish>=1.0", "pyarrow>=15"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "hypothesis>=6.100", "mypy>=1.10", "ruff>=0.5"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/entity_resolution_gate"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+
+[[tool.mypy.overrides]]
+module = ["rapidfuzz.*", "jellyfish.*", "networkx.*", "duckdb.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100

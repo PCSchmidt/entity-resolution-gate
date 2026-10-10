@@ -15,7 +15,7 @@ Pairwise precision/recall/F1 against `entity_id`.
 
 ## What the numbers say
 
-- Tax-ID violations are 0 in every run, and by construction in all runs (hypothesis-tested), not by tuning.
+- Tax-ID violations are 0 in every run. This holds by construction (the fallback makes an inconsistent cluster impossible) and is property-tested, so it does not depend on tuning.
 - Precision is capped near 0.86 at small scale by the trap twins' records that carry no tax ID: identical name and address, so nothing in the data separates them.
 - Quality falls at 20k entities. The synthetic name space has only 4,032 base names, so many distinct vendors collide. This is partly a generator limit and partly a real scaling cost; the two are not separated here.
 

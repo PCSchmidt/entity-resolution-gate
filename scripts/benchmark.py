@@ -28,7 +28,9 @@ def main() -> None:
         out, _ = resolve(df)
         secs = time.perf_counter() - t
         p, r, f = pairwise_prf(out)
-        print(f"| {n} (seed {seed}) | {df.height} | {p:.3f} | {r:.3f} | {f:.3f} | {violations(out)} | {secs:.1f} |")
+        print(
+            f"| {n} (seed {seed}) | {df.height} | {p:.3f} | {r:.3f} | {f:.3f} | {violations(out)} | {secs:.1f} |"
+        )
 
 
 if __name__ == "__main__":

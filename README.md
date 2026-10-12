@@ -1,6 +1,8 @@
 # entity-resolution-gate — deciding which records are the same company, with hard rules that similarity can never override
 
-**Status: v0.1, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records, and a **real-data study on federal-contractor names** has now been run under a protocol written in advance: the tuned pipeline scored F1 0.763 against 0.732 for a tuned plain fuzzy matcher, a narrow edge whose interval just clears zero, and blocking turned out to be the recall bottleneck ([Results](#results)). The hard tax-ID rule could not be tested on public data, and the 100k+ record benchmark is not done.
+![CI](https://github.com/PCSchmidt/entity-resolution-gate/actions/workflows/ci.yml/badge.svg)
+
+**Status: v0.2, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records, and a **real-data study on federal-contractor names** has now been run under a protocol written in advance: the tuned pipeline scored F1 0.763 against 0.732 for a tuned plain fuzzy matcher, a narrow edge whose interval just clears zero, and blocking turned out to be the recall bottleneck ([Results](#results)). The hard tax-ID rule could not be tested on public data, and the 100k+ record benchmark is not done.
 
 ```text
 $ python examples/demo.py                      # 7 vendor records; entity_id is the hidden truth
@@ -130,7 +132,7 @@ uv venv && uv pip install -e ".[dev]"
 
 python examples/demo.py              # the output shown above
 python scripts/benchmark.py          # the held-out synthetic table below
-pytest -q                            # 8 passed
+pytest -q                            # 15 passed
 ```
 
 ```python
@@ -219,11 +221,13 @@ No keys. The benchmark data is generated from a seed. Real data later should com
 ### Verify the claims (a reviewer's path)
 
 ```bash
-pytest -q                         # 8 passed, includes the property test of the guarantee
+pytest -q                         # 15 passed, includes the property test of the guarantee
 mypy src tests scripts            # strict, clean
 python examples/demo.py           # the table and audit log shown at the top
 python scripts/benchmark.py       # the held-out synthetic table
 ```
+
+The real-data study needs the `study` extra and a download from the public USAspending API; the exact commands are in [docs/RESULTS_REAL.md](docs/RESULTS_REAL.md#reproduce). The test stage refuses to run twice.
 
 ### Documentation map
 

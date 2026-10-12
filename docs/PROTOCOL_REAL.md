@@ -31,6 +31,7 @@ The tuned number maximises pairwise F1 on development; ties go to the higher thr
 
 Pairwise precision, recall and F1 over all within-split record pairs (as `pairwise_prf` already does). Intervals: bootstrap over test **entities**, 2,000 resamples, for each matcher and for differences against the plain fuzzy matcher.
 
+
 Two cuts, defined here and not changed:
 - **Name-findable recall.** Among true pairs (same UEI), the share whose normalised names have `rapidfuzz.fuzz.token_set_ratio` of at least 50. Pairs below that (renames such as one company name replaced by another) cannot be recovered by string similarity, so recall on them is reported separately, not hidden.
 - **Same-name, different-registration.** Merges of two records with identical normalised names but different UEIs are counted as false positives by the answer key but may be one organisation registered twice. They are counted and reported separately.
@@ -52,4 +53,9 @@ One month, one agency, contracts only; about 370 entities in test, so intervals 
 
 ## Deviations
 
-None yet.
+Both were made after the first development run and **before the test split was scored**. Only development numbers had been seen.
+
+1. **Splink probability grid widened from 0.50-0.99 to 0.01-0.99.** The first development run scored Splink at F1 0.000 at every threshold, because with one Jaro-Winkler comparison and the prior fixed at 0.001 (a value the protocol did not specify) its highest match probability was 0.229, so nothing could ever reach 0.50. The protocol's own intent was that the tuned threshold absorbs the prior; the grid contradicted it. I diagnosed this on development data only (probability by comparison level; no test data touched).
+2. **A second, richer Splink variant (`splink_rich`) added.** With a single Jaro-Winkler comparison Splink is just a four-level similarity threshold, a weak baseline. The variant adds an exact first-token comparison and a token-overlap comparison (two or more shared tokens, one shared token) and trains by expectation-maximisation on two blocking rules. Both Splink variants are reported; neither is dropped. The protocol's headline Splink is the original single-comparison configuration; `splink_rich` is exploratory and added to avoid dismissing Splink on a thin configuration. Adding a matcher after seeing development results widens the forking paths; the test intervals should be read with that in mind.
+
+Development results at the time of the freeze (F1, one tuned number each): exact 0.680, plain fuzzy 0.700 (t=92), Splink 0.727 (p=0.16), Splink-rich 0.639 (p=0.98), pipeline 0.742 (threshold 0.90).

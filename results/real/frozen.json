@@ -1,0 +1,8 @@
+{
+ "exact": 0.0,
+ "fuzzy": 92.0,
+ "gate": 0.9,
+ "splink": 0.16,
+ "splink_rich": 0.98,
+ "gate_default": 0.93
+}

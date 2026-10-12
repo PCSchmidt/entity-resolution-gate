@@ -13,6 +13,9 @@
  "P_full@0.5": 0.99,
  "P_full@1.0": 0.99,
  "splink_id@0.25": 0.99,
+ "splink_id_sup@0.25": 0.999,
  "splink_id@0.5": 0.99,
- "splink_id@1.0": 0.86
+ "splink_id_sup@0.5": 0.98,
+ "splink_id@1.0": 0.86,
+ "splink_id_sup@1.0": 0.98
 }

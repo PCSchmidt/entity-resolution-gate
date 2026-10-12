@@ -30,6 +30,7 @@ from entity_resolution_gate.evaluation import (
     components,
     pair_table,
     prf_counts,
+    rid_pairs_to_positions,
 )
 from entity_resolution_gate.pipeline import AuditLog, Config, candidate_pairs, normalise, resolve
 
@@ -232,12 +233,10 @@ def run_test() -> None:
         if k != "fuzzy":
             entry["f1_minus_fuzzy"] = float(entry["f1"] - f_fuzzy)
     # C4: for the pipeline, true pairs never scored (blocking) versus scored and rejected
-    cand = {
-        (a, b)
-        for a, b in candidate_pairs(
-            df, Config(threshold=frozen["gate"], w_name=1.0, w_addr=0.0), AuditLog()
-        )
-    }
+    cand = rid_pairs_to_positions(
+        candidate_pairs(df, Config(threshold=frozen["gate"], w_name=1.0, w_addr=0.0), AuditLog()),
+        df["rid"].to_list(),
+    )  # record ids are global across splits; the pair table is positional
     t = tables["gate"]
     missed = t["true"] & ~t["pred"]
     blocked_out = sum(

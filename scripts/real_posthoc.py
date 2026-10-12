@@ -15,7 +15,7 @@ from typing import Any
 import numpy as np
 from run_real import FINDABLE_RATIO, OUT, load
 
-from entity_resolution_gate.evaluation import codes, pair_table
+from entity_resolution_gate.evaluation import codes, pair_table, rid_pairs_to_positions
 from entity_resolution_gate.pipeline import AuditLog, Config, candidate_pairs, normalise, resolve
 
 
@@ -28,7 +28,7 @@ def main() -> None:
     out, _ = resolve(df, cfg)
     labels = np.asarray(out.sort("rid")["cluster_id"].to_numpy(), dtype=np.int64)
     t = pair_table(labels, ent, names)
-    scored = {(a, b) for a, b in candidate_pairs(df, cfg, AuditLog())}
+    scored = rid_pairs_to_positions(candidate_pairs(df, cfg, AuditLog()), df["rid"].to_list())
     result: dict[str, Any] = {}
     for cut, mask in [
         ("findable", t["tsr"] >= FINDABLE_RATIO),

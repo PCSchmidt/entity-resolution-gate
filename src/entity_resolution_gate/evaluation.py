@@ -80,3 +80,13 @@ def boot_f1(t: Table, w: npt.NDArray[np.float64]) -> float:
     p = tp / pred if pred else 1.0
     r = tp / true if true else 1.0
     return 2 * p * r / (p + r) if p + r else 0.0
+
+
+def rid_pairs_to_positions(pairs: list[tuple[int, int]], rids: list[int]) -> set[tuple[int, int]]:
+    """Translate pairs of record ids into sorted pairs of row positions.
+
+    Record ids are global across splits and need not equal row positions; `pair_table` and the cluster
+    labels are positional. Comparing the two without translating silently mismatches them.
+    """
+    pos = {r: i for i, r in enumerate(rids)}
+    return {(min(pos[a], pos[b]), max(pos[a], pos[b])) for a, b in pairs}

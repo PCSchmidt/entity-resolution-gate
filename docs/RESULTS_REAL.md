@@ -36,10 +36,12 @@ For the tuned pipeline, true pairs split by whether blocking ever proposed them 
 
 | Pairs | True | Found | Scored, then rejected | Never scored (blocking) |
 | --- | --- | --- | --- | --- |
-| Name-findable | 1,521 | 1,234 | 41 | **246** |
-| Renames | 306 | 0 | 17 | 289 |
+| Name-findable | 1,521 | 1,234 | 73 | **214** |
+| Renames | 306 | 0 | 16 | 290 |
 
-Of the 287 findable pairs it misses, **246 (86%) were never put in front of the scorer**. Blocking, not scoring, is the recall bottleneck here. That 246 is an upper bound on what better blocking could recover, since some of those pairs might still score below the threshold. This was run after the test results were seen and was not tested as a fix.
+Of the 287 findable pairs it misses, **214 (75%) were never put in front of the scorer** and 73 were scored and rejected. Blocking is the larger recall loss here. That 214 is an upper bound on what better blocking could recover, since some of those pairs might still score below the threshold. This was run after the test results were seen and was not tested as a fix.
+
+**Correction.** The first version of this section reported 41 and 246 (86%). It compared record ids with row positions, which differ in this dataset (ids are global across the development and test splits), so it overstated the blocking share; the matcher results above were not affected. See [Deviation 3](PROTOCOL_REAL.md#deviations).
 
 ## Precision: a ceiling shared by every method
 

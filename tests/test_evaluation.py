@@ -85,3 +85,10 @@ def test_bootstrap_weight_zero_removes_an_entity() -> None:
     ent = np.array([0, 0, 1, 1], dtype=np.int64)
     table = pair_table(lab, ent, ["a", "a", "b", "b"])
     assert boot_f1(table, np.array([2.0, 0.0])) == 1.0  # only entity 0 remains, found perfectly
+
+
+def test_rid_pairs_to_positions_handles_non_contiguous_ids() -> None:
+    from entity_resolution_gate.evaluation import rid_pairs_to_positions
+
+    rids = [13, 40, 7, 99]  # global ids, not row positions
+    assert rid_pairs_to_positions([(40, 13), (99, 7)], rids) == {(0, 1), (2, 3)}

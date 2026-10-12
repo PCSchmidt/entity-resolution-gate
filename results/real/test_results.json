@@ -138,8 +138,14 @@
    "f1_minus_fuzzy": 0.009473871515819354
   }
  },
- "gate_missed_true_pairs": {
+ "gate_missed_true_pairs_INVALID_rid_position_mismatch": {
   "total": 593,
   "never_scored_by_blocking": 535
+ },
+ "gate_missed_true_pairs": {
+  "note": "corrected 2026-10-12 by scripts/real_posthoc.py; see PROTOCOL_REAL.md Deviation 3",
+  "findable_missed": 287,
+  "findable_never_scored_by_blocking": 214,
+  "findable_scored_then_rejected": 73
  }
 }

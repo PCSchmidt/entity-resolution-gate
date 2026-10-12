@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/PCSchmidt/entity-resolution-gate/actions/workflows/ci.yml/badge.svg)
 
-**Status: v0.2, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records, and a **real-data study on federal-contractor names** has now been run under a protocol written in advance: the tuned pipeline scored F1 0.763 against 0.732 for a tuned plain fuzzy matcher, a narrow edge whose interval just clears zero, and blocking turned out to be the recall bottleneck ([Results](#results)). The hard tax-ID rule could not be tested on public data, and the 100k+ record benchmark is not done.
+**Status: v0.2, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records, and a **real-data study on federal-contractor names** has now been run under a protocol written in advance: the tuned pipeline scored F1 0.763 against 0.732 for a tuned plain fuzzy matcher, a narrow edge whose interval just clears zero, and blocking turned out to be the larger source of lost recall ([Results](#results)). The hard tax-ID rule could not be tested on public data, and the 100k+ record benchmark is not done.
 
 ```text
 $ python examples/demo.py                      # 7 vendor records; entity_id is the hidden truth
@@ -195,7 +195,7 @@ A separate study, planned before any matcher was run ([docs/PROTOCOL_REAL.md](do
 
 - The tuned pipeline beats the tuned plain fuzzy matcher by 0.031 F1 (95% interval +0.004 to +0.059), mostly through recall. The untuned default does not (+0.009, interval spans zero). Read this as suggestive: a richer Splink variant was added after the first development run, and the interval's lower end is thin.
 - 17% of true pairs are renames that share almost no text; **no matcher recovers any of them**, so overall recall is capped near 0.83.
-- Of the findable pairs the pipeline misses, 86% were never proposed by blocking, so better blocking, not better scoring, is the lever (post-hoc finding, not yet tested as a fix).
+- Of the findable pairs the pipeline misses, 75% were never proposed by blocking and 25% were scored and rejected, so better blocking is the larger lever (post-hoc finding, not yet tested as a fix).
 - Public data has no tax IDs, so this study does **not** test the hard constraint the design is built around.
 
 ## Limitations

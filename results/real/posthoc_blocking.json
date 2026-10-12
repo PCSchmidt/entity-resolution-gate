@@ -1,0 +1,14 @@
+{
+ "findable": {
+  "true_pairs": 1521,
+  "found": 1234,
+  "scored_then_rejected": 41,
+  "never_scored_by_blocking": 246
+ },
+ "not_findable": {
+  "true_pairs": 306,
+  "found": 0,
+  "scored_then_rejected": 17,
+  "never_scored_by_blocking": 289
+ }
+}

@@ -1,6 +1,6 @@
 # entity-resolution-gate — deciding which records are the same company, with hard rules that similarity can never override
 
-**Status: v0.1, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. **Only synthetic data has been used**, and the largest run is 39,369 records; real federal-contracting data and the 100k+ record benchmark are not done ([Results](#results)).
+**Status: v0.1, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records, and a **real-data study on federal-contractor names** has now been run under a protocol written in advance: the tuned pipeline scored F1 0.763 against 0.732 for a tuned plain fuzzy matcher, a narrow edge whose interval just clears zero, and blocking turned out to be the recall bottleneck ([Results](#results)). The hard tax-ID rule could not be tested on public data, and the 100k+ record benchmark is not done.
 
 ```text
 $ python examples/demo.py                      # 7 vendor records; entity_id is the hidden truth
@@ -56,7 +56,7 @@ It is a poor fit if your records have no reliable identifier to constrain on, if
 
 Any similarity score can be fooled by two look-alike companies. A rule that holds regardless of the score is the only thing that makes a merge guarantee possible. The score decides what is *likely*; the constraints decide what is *allowed*.
 
-**What's real and what's not.** The pipeline, the constraints, the audit log and the benchmark run today and are tested, including a property test that no cluster ever contains two tax IDs. **All data is synthetic.** Performance on real, messy public data (SAM.gov, USASpending, SEC EDGAR) is unknown, and the thresholds were chosen on synthetic data.
+**What's real and what's not.** The pipeline, the constraints, the audit log and the benchmark run today and are tested, including a property test that no cluster ever contains two tax IDs. The scale and constraint claims rest on **synthetic data**. A name-only study on real USAspending names exists ([docs/RESULTS_REAL.md](docs/RESULTS_REAL.md)), but public data has no tax IDs or alternate-name addresses, so the constraint and address scoring were not exercised on real data.
 
 ## At a glance
 
@@ -66,9 +66,10 @@ Any similarity score can be fooled by two look-alike companies. A rule that hold
 | Output | the same table plus `cluster_id`, and an audit log |
 | Guarantee | no cluster contains two different non-null tax IDs (property-tested over seeds, trap rates and thresholds) |
 | Measured (synthetic, held-out seeds) | F1 0.91 at 2,000 records, 0.80 at 39,000 records; 0 tax-ID violations in every run |
+| Measured (real USAspending names, name-only) | F1 0.763 against 0.732 for tuned plain fuzzy matching (difference +0.031, 95% interval +0.004 to +0.059); 17% of true pairs are renames no string method finds |
 | Speed | 39,369 records in 6.7 s on one machine, single thread |
 | Stack | Polars, DuckDB, NetworkX, RapidFuzz, jellyfish (Metaphone) |
-| Tests | 8, including property-based; `mypy --strict`; ruff |
+| Tests | 15, including property-based; `mypy --strict`; ruff |
 
 ## Architecture at a glance
 
@@ -178,14 +179,31 @@ Synthetic data only: typos, case changes, trading prefixes and suffixes, address
 - Quality falls at 20,000 entities. The synthetic name space has only 4,032 base names, so many distinct vendors collide; this is partly the generator and partly a real scaling cost, and the two are not separated here.
 - Two design flaws were found by running the benchmark: a threshold of 0.82 chained unrelated vendors into one component (precision 0.61), and single-token blocking keys collapsed recall to 0.005 at 5,000 entities. Both are fixed and described in [docs/RESULTS.md](docs/RESULTS.md).
 
+### Real data: federal-contractor names (USAspending, January 2024)
+
+A separate study, planned before any matcher was run ([docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md)), scores four matchers on 367 held-out registry entities (1,138 name strings), with the registry's own identifier as the hidden answer key. Each matcher has one number tuned on development data; the test split was scored once.
+
+| Matcher | Precision | Recall | F1 |
+| --- | --- | --- | --- |
+| Exact normalised name | 0.927 | 0.556 | 0.695 |
+| Plain fuzzy, tuned | 0.886 | 0.623 | 0.732 |
+| Splink (two configurations) | 0.927 / 0.897 | 0.556 / 0.592 | 0.695 / 0.713 |
+| **This pipeline, tuned** | 0.876 | 0.675 | **0.763** |
+| This pipeline, default threshold | 0.888 | 0.636 | 0.741 |
+
+- The tuned pipeline beats the tuned plain fuzzy matcher by 0.031 F1 (95% interval +0.004 to +0.059), mostly through recall. The untuned default does not (+0.009, interval spans zero). Read this as suggestive: a richer Splink variant was added after the first development run, and the interval's lower end is thin.
+- 17% of true pairs are renames that share almost no text; **no matcher recovers any of them**, so overall recall is capped near 0.83.
+- Of the findable pairs the pipeline misses, 86% were never proposed by blocking, so better blocking, not better scoring, is the lever (post-hoc finding, not yet tested as a fix).
+- Public data has no tax IDs, so this study does **not** test the hard constraint the design is built around.
+
 ## Limitations
 
-- **Synthetic data only.** Real names, abbreviations, transliterations, mergers and subsidiaries are far messier.
+- **Constraint and scale claims are synthetic-only.** The real-data study covers names only, one month and one agency; mergers, subsidiaries and transliteration are barely represented.
 - **One hard rule.** Only the tax-ID contradiction is enforced. CAGE codes, parent-subsidiary rules and other absolute constraints are not built.
 - **Missing identifiers defeat the gate.** A record with no tax ID can be grouped with the wrong twin, as the demo shows; the gate guarantees consistency, not correctness.
 - **Thresholds are not portable.** 0.93 and density 0.5 were picked on synthetic data and will need re-tuning.
 - **Small name space.** The generator saturates near 20,000 entities, so the largest rows are pessimistic in a way unrelated to the algorithm.
-- **Not at scale.** No 100k+ run, no F1-versus-latency curve; not compared with Splink.
+- **Not at scale.** No 100k+ run and no F1-versus-latency curve. Splink was compared only on the small real-data study, with a fixed hand-set configuration.
 - **No embeddings or extra features** (executive names, geography, vector search) yet.
 
 ## Operational notes
@@ -211,7 +229,9 @@ python scripts/benchmark.py       # the held-out synthetic table
 
 | Doc | What it covers |
 | --- | --- |
-| [docs/RESULTS.md](docs/RESULTS.md) | protocol, the table, how to read it, the two development findings |
+| [docs/RESULTS_REAL.md](docs/RESULTS_REAL.md) | the real-data study: results, criteria, the rename ceiling, where recall is lost |
+| [docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md) | its plan, written before any matcher was run, and the two deviations |
+| [docs/RESULTS.md](docs/RESULTS.md) | synthetic protocol, the table, how to read it, the two development findings |
 | [examples/demo.py](examples/demo.py) | the worked example above |
 | [src/entity_resolution_gate/pipeline.py](src/entity_resolution_gate/pipeline.py) | blocking, scoring and the graph gate |
 

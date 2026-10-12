@@ -1,5 +1,7 @@
 # Protocol: does better blocking recover lost recall? (written before any blocking variant was run)
 
+> **Sampling correction (found 2026-10-12): this is a pilot on a non-random sample.** The download read awards sorted by recipient name, and the API returned only the first 10,000 of about 568,000 matching awards for January 2024 (the same 10,000-award limit applied to July), so every record comes from recipients whose names begin with a digit, a symbol or the letter "A". It was not noticed earlier because the API reported no further pages. The numbers below describe that alphabetical prefix only: it over-represents look-alike "Advanced ..." style names and says little about federal contractor names in general. Earlier wording that called this a "census" was wrong. A new study on a random sample of all recipients is under way; see [PROTOCOL_SAMPLE.md](PROTOCOL_SAMPLE.md) when it is published.
+
 Committed before the first variant result, so the choices below cannot have been made after seeing scores. Anything changed later is listed under [Deviations](#deviations). This follows [PROTOCOL_REAL.md](PROTOCOL_REAL.md) and [RESULTS_REAL.md](RESULTS_REAL.md); read those first.
 
 ## Why

@@ -1,0 +1,175 @@
+{
+ "label": "heldout_results.json",
+ "n_records": 1078,
+ "n_entities": 349,
+ "frozen": {
+  "variant": "base",
+  "thresholds": {
+   "base": 0.9,
+   "squash": 0.9,
+   "squash_first": 0.9,
+   "squash_first_wide": 0.9
+  },
+  "fuzzy_t": 92.0
+ },
+ "findable_true_pairs": 1355,
+ "matchers": {
+  "exact": {
+   "precision": 0.9232386961093586,
+   "recall": 0.35374697824335216,
+   "f1": 0.5115059714535393,
+   "f1_ci95": [
+    0.3244581564537805,
+    0.7634973170060537
+   ],
+   "recall_findable": 0.647970479704797,
+   "false_positive_pairs": 73,
+   "false_positive_same_name": 73
+  },
+  "fuzzy": {
+   "precision": 0.8564102564102564,
+   "recall": 0.40370668815471394,
+   "f1": 0.5487404162102958,
+   "f1_ci95": [
+    0.3601745274677263,
+    0.7970830962710896
+   ],
+   "recall_findable": 0.7394833948339483,
+   "false_positive_pairs": 168,
+   "false_positive_same_name": 73
+  },
+  "base": {
+   "precision": 0.5670154459392127,
+   "recall": 0.45850120870265915,
+   "f1": 0.5070171530407662,
+   "f1_ci95": [
+    0.3534539008165301,
+    0.6841951704000178
+   ],
+   "recall_findable": 0.8398523985239852,
+   "false_positive_pairs": 869,
+   "false_positive_same_name": 73,
+   "candidate_pairs": 15694,
+   "pair_completeness_findable": 0.8826568265682657,
+   "findable_candidate_but_not_linked": 58,
+   "f1_minus_fuzzy": -0.04172326316952957,
+   "f1_minus_fuzzy_ci95": [
+    -0.16999046735379178,
+    0.013100294285189149
+   ]
+  },
+  "squash": {
+   "precision": 0.5451110061407652,
+   "recall": 0.4649476228847704,
+   "f1": 0.5018482278756252,
+   "f1_ci95": [
+    0.3533622375720095,
+    0.6791933102328285
+   ],
+   "recall_findable": 0.8516605166051661,
+   "false_positive_pairs": 963,
+   "false_positive_same_name": 73,
+   "candidate_pairs": 17203,
+   "pair_completeness_findable": 0.9372693726937269,
+   "findable_candidate_but_not_linked": 116,
+   "f1_minus_fuzzy": -0.04689218833467057,
+   "f1_minus_fuzzy_ci95": [
+    -0.17927872742717504,
+    0.01238292654796319
+   ]
+  },
+  "squash_first": {
+   "precision": 0.5425481899388811,
+   "recall": 0.4649476228847704,
+   "f1": 0.5007593838142764,
+   "f1_ci95": [
+    0.3523461312063763,
+    0.6775065481113867
+   ],
+   "recall_findable": 0.8516605166051661,
+   "false_positive_pairs": 973,
+   "false_positive_same_name": 73,
+   "candidate_pairs": 26977,
+   "pair_completeness_findable": 0.9387453874538746,
+   "findable_candidate_but_not_linked": 118,
+   "f1_minus_fuzzy": -0.04798103239601936,
+   "f1_minus_fuzzy_ci95": [
+    -0.1804195237578583,
+    0.011650559440967137
+   ]
+  },
+  "squash_first_wide": {
+   "precision": 0.5425481899388811,
+   "recall": 0.4649476228847704,
+   "f1": 0.5007593838142764,
+   "f1_ci95": [
+    0.3523461312063763,
+    0.6775065481113867
+   ],
+   "recall_findable": 0.8516605166051661,
+   "false_positive_pairs": 973,
+   "false_positive_same_name": 73,
+   "candidate_pairs": 28595,
+   "pair_completeness_findable": 0.9446494464944649,
+   "findable_candidate_but_not_linked": 126,
+   "f1_minus_fuzzy": -0.04798103239601936,
+   "f1_minus_fuzzy_ci95": [
+    -0.1804195237578583,
+    0.011650559440967137
+   ]
+  }
+ },
+ "contrasts_vs_base": {
+  "squash": {
+   "f1_difference": -0.005168925165141003,
+   "f1_difference_ci95": [
+    -0.0413719031230925,
+    0.010337498986426118
+   ],
+   "f1_difference_ci_bonferroni98_3": [
+    -0.0538879274503846,
+    0.01318157861391024
+   ],
+   "completeness_difference": 0.05461254612546118,
+   "completeness_difference_ci95": [
+    0.00498589457447442,
+    0.12789154332951957
+   ],
+   "candidate_ratio": 1.0961513954377469
+  },
+  "squash_first": {
+   "f1_difference": -0.0062577692264897955,
+   "f1_difference_ci95": [
+    -0.04255916873873245,
+    0.009941970308165824
+   ],
+   "f1_difference_ci_bonferroni98_3": [
+    -0.05708274251256088,
+    0.012352650338153227
+   ],
+   "completeness_difference": 0.056088560885608874,
+   "completeness_difference_ci95": [
+    0.005640498870450194,
+    0.13037535858148747
+   ],
+   "candidate_ratio": 1.7189371734420797
+  },
+  "squash_first_wide": {
+   "f1_difference": -0.0062577692264897955,
+   "f1_difference_ci95": [
+    -0.04255916873873245,
+    0.009941970308165824
+   ],
+   "f1_difference_ci_bonferroni98_3": [
+    -0.05708274251256088,
+    0.012352650338153227
+   ],
+   "completeness_difference": 0.0619926199261992,
+   "completeness_difference_ci95": [
+    0.00687533210314274,
+    0.14492954687716256
+   ],
+   "candidate_ratio": 1.8220338983050848
+  }
+ }
+}

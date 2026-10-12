@@ -62,6 +62,7 @@ class Config:
     w_name: float = 0.7
     w_addr: float = 0.3
     blocking: str = "base"  # see block_keys; "base" reproduces the original behaviour
+    name_score: str = "max"  # "max": larger of Jaro-Winkler and token-sort (original); "token_sort": token-sort only
 
 
 @dataclass
@@ -97,7 +98,8 @@ def pair_score(a: dict[str, Any], b: dict[str, Any], cfg: Config) -> float:
     if a["tax_id"] and a["tax_id"] == b["tax_id"]:
         return 1.0  # same verified tax id: positive evidence, independent of spelling
     na, nb = normalise(a["name"]), normalise(b["name"])
-    name = max(JaroWinkler.similarity(na, nb), fuzz.token_sort_ratio(na, nb) / 100.0)
+    tsr = fuzz.token_sort_ratio(na, nb) / 100.0
+    name = tsr if cfg.name_score == "token_sort" else max(JaroWinkler.similarity(na, nb), tsr)
     addr = fuzz.ratio((a["address"] or "").lower(), (b["address"] or "").lower()) / 100.0
     if a["zip"] and b["zip"] and a["zip"] != b["zip"]:
         addr *= 0.5

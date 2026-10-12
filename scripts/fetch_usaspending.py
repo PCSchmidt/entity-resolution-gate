@@ -6,8 +6,9 @@ output row per distinct (name, address, UEI) triple, with the number of awards b
 
     python scripts/fetch_usaspending.py --out data/usaspending_2024-01.jsonl --start 2024-01-01 --end 2024-01-31
 
-A date range is read completely (sorted by recipient name, pages until none remain), so the sample is a
-census of that window's awards, not a draw biased toward the largest recipients.
+WARNING: this reads only the first 10,000 awards of the window in recipient-name order (the API stops
+there while still reporting no next page), so it samples an alphabetical prefix, not the window. It was used
+for the pilot only; the random-sample study uses scripts/fetch_recipient_frame.py instead.
 """
 
 from __future__ import annotations

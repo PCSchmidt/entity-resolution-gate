@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/PCSchmidt/entity-resolution-gate/actions/workflows/ci.yml/badge.svg)
 
-**Status: v0.2, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records, and a **real-data study on federal-contractor names** has now been run under a protocol written in advance: the tuned pipeline scored F1 0.763 against 0.732 for a tuned plain fuzzy matcher, a narrow edge whose interval just clears zero, and blocking turned out to be the larger source of lost recall ([Results](#results)). The hard tax-ID rule could not be tested on public data, and the 100k+ record benchmark is not done.
+**Status: v0.2, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records, and a **pilot real-data study on federal-contractor names** has been run under a protocol written in advance. It used an alphabetical-prefix sample (names beginning with a digit or "A"), not a random one, so it is not evidence about contractor names in general: the pipeline beat a tuned fuzzy matcher by a narrow margin on one month and did not on a second ([Results](#results)). A random-sample study is under way. The hard tax-ID rule could not be tested on public data, and the 100k+ record benchmark is not done.
 
 ```text
 $ python examples/demo.py                      # 7 vendor records; entity_id is the hidden truth
@@ -68,7 +68,7 @@ Any similarity score can be fooled by two look-alike companies. A rule that hold
 | Output | the same table plus `cluster_id`, and an audit log |
 | Guarantee | no cluster contains two different non-null tax IDs (property-tested over seeds, trap rates and thresholds) |
 | Measured (synthetic, held-out seeds) | F1 0.91 at 2,000 records, 0.80 at 39,000 records; 0 tax-ID violations in every run |
-| Measured (real USAspending names, name-only) | F1 0.763 against 0.732 for tuned plain fuzzy matching (difference +0.031, 95% interval +0.004 to +0.059); 17% of true pairs are renames no string method finds |
+| Measured (real USAspending names, name-only, **pilot: names starting with a digit or "A" only**) | January: F1 0.763 against 0.732 for tuned plain fuzzy matching (+0.031, 95% interval +0.004 to +0.059). July, fresh entities: 0.507 against 0.549, no advantage. Not a random sample |
 | Speed | 39,369 records in 6.7 s on one machine, single thread |
 | Stack | Polars, DuckDB, NetworkX, RapidFuzz, jellyfish (Metaphone) |
 | Tests | 15, including property-based; `mypy --strict`; ruff |
@@ -181,7 +181,10 @@ Synthetic data only: typos, case changes, trading prefixes and suffixes, address
 - Quality falls at 20,000 entities. The synthetic name space has only 4,032 base names, so many distinct vendors collide; this is partly the generator and partly a real scaling cost, and the two are not separated here.
 - Two design flaws were found by running the benchmark: a threshold of 0.82 chained unrelated vendors into one component (precision 0.61), and single-token blocking keys collapsed recall to 0.005 at 5,000 entities. Both are fixed and described in [docs/RESULTS.md](docs/RESULTS.md).
 
-### Real data: federal-contractor names (USAspending, January 2024)
+### Real data, pilot: federal-contractor names (USAspending, alphabetical prefix)
+
+> **Sampling correction (found 2026-10-12): this is a pilot on a non-random sample.** The download read awards sorted by recipient name, and the API returned only the first 10,000 of about 568,000 matching awards for January 2024 (the same 10,000-award limit applied to July), so every record comes from recipients whose names begin with a digit, a symbol or the letter "A". It was not noticed earlier because the API reported no further pages. The numbers below describe that alphabetical prefix only: it over-represents look-alike "Advanced ..." style names and says little about federal contractor names in general. Earlier wording that called this a "census" was wrong. A new study on a random sample of all recipients is under way; see [docs/PROTOCOL_SAMPLE.md](docs/PROTOCOL_SAMPLE.md) when it is published.
+
 
 A separate study, planned before any matcher was run ([docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md)), scores four matchers on 367 held-out registry entities (1,138 name strings), with the registry's own identifier as the hidden answer key. Each matcher has one number tuned on development data; the test split was scored once.
 

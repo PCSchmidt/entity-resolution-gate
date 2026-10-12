@@ -1,5 +1,7 @@
 # Protocol: entity resolution on real federal-contractor names (written before any matcher was run on this data)
 
+> **Sampling correction (found 2026-10-12): this is a pilot on a non-random sample.** The download read awards sorted by recipient name, and the API returned only the first 10,000 of about 568,000 matching awards for January 2024 (the same 10,000-award limit applied to July), so every record comes from recipients whose names begin with a digit, a symbol or the letter "A". It was not noticed earlier because the API reported no further pages. The numbers below describe that alphabetical prefix only: it over-represents look-alike "Advanced ..." style names and says little about federal contractor names in general. Earlier wording that called this a "census" was wrong. A new study on a random sample of all recipients is under way; see [PROTOCOL_SAMPLE.md](PROTOCOL_SAMPLE.md) when it is published.
+
 Committed before the first matcher result, so the choices below cannot have been made after seeing scores. Anything changed later is listed under [Deviations](#deviations).
 
 ## Why
@@ -8,7 +10,7 @@ Every number so far ([RESULTS.md](RESULTS.md)) comes from a synthetic generator 
 
 ## What I looked at before writing this (stated so it can be discounted)
 
-I downloaded a census of January 2024 Department of Defense contract awards from the public USAspending API and looked at **descriptive statistics only**: how many registry entries (UEIs) there are (748), how many have more than one name string (the registry's profile lists alternate names; 236 UEIs have two or more names that differ after normalisation, 1,043 name strings in all), and a dozen random examples. I ran **no matcher** on it. I first tried the UEI as the answer key using the award-level names and found zero within-UEI name variation there, then tried parent-company families and found only 10 families with more than one registration in the month (below the 50 I had set as a minimum), so I dropped both.
+I downloaded the first 10,000 awards (in recipient-name order, not a census; see the correction above) of January 2024 Department of Defense contract awards from the public USAspending API and looked at **descriptive statistics only**: how many registry entries (UEIs) there are (748), how many have more than one name string (the registry's profile lists alternate names; 236 UEIs have two or more names that differ after normalisation, 1,043 name strings in all), and a dozen random examples. I ran **no matcher** on it. I first tried the UEI as the answer key using the award-level names and found zero within-UEI name variation there, then tried parent-company families and found only 10 families with more than one registration in the month (below the 50 I had set as a minimum), so I dropped both.
 
 ## Task and answer key
 

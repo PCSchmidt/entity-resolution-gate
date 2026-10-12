@@ -124,3 +124,24 @@ def test_candidate_pairs_are_returned_in_sorted_order() -> None:
     ] * 3
     pairs = candidate_pairs(_frame(names), Config(blocking="squash_first"), AuditLog())
     assert pairs == sorted(pairs)
+
+
+@given(names_st, names_st)
+def test_token_sort_score_never_exceeds_the_default_score(a: str, b: str) -> None:
+    from entity_resolution_gate.pipeline import pair_score
+
+    ra = {"name": a, "address": "", "zip": None, "tax_id": None}
+    rb = {"name": b, "address": "", "zip": None, "tax_id": None}
+    hi = pair_score(ra, rb, Config(w_name=1.0, w_addr=0.0))
+    lo = pair_score(ra, rb, Config(w_name=1.0, w_addr=0.0, name_score="token_sort"))
+    assert lo <= hi + 1e-12
+
+
+def test_long_shared_prefix_scores_lower_under_token_sort() -> None:
+    from entity_resolution_gate.pipeline import pair_score
+
+    ra = {"name": "advanced technology systems", "address": "", "zip": None, "tax_id": None}
+    rb = {"name": "advanced technology solutions", "address": "", "zip": None, "tax_id": None}
+    default = pair_score(ra, rb, Config(w_name=1.0, w_addr=0.0))
+    tsr = pair_score(ra, rb, Config(w_name=1.0, w_addr=0.0, name_score="token_sort"))
+    assert tsr < default

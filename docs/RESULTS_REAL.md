@@ -1,8 +1,10 @@
 # Results: entity resolution on real federal-contractor names
 
+> **Sampling correction (found 2026-10-12): this is a pilot on a non-random sample.** The download read awards sorted by recipient name, and the API returned only the first 10,000 of about 568,000 matching awards for January 2024 (the same 10,000-award limit applied to July), so every record comes from recipients whose names begin with a digit, a symbol or the letter "A". It was not noticed earlier because the API reported no further pages. The numbers below describe that alphabetical prefix only: it over-represents look-alike "Advanced ..." style names and says little about federal contractor names in general. Earlier wording that called this a "census" was wrong. A new study on a random sample of all recipients is under way; see [PROTOCOL_SAMPLE.md](PROTOCOL_SAMPLE.md) when it is published.
+
 Plan: [PROTOCOL_REAL.md](PROTOCOL_REAL.md), pushed before any matcher was run, with two deviations logged before the test split was scored. Synthetic results: [RESULTS.md](RESULTS.md).
 
-**Setup.** January 2024 Department of Defense contract awards, from the public USAspending API. 748 registry entries (UEIs), 2,261 distinct name strings (each UEI's primary name plus the alternate names in its profile). The UEI is the answer key and is never a matcher input. Entities are split by a hash of the UEI: 381 for development, 367 for test (1,138 records). One tuned number per matcher was chosen on development and frozen; the test split was scored once. Records carry names only (no addresses or tax IDs in this data).
+**Setup.** The first 10,000 January 2024 Department of Defense contract awards in recipient-name order (names beginning with a digit, a symbol or "A"), from the public USAspending API. 748 registry entries (UEIs), 2,261 distinct name strings (each UEI's primary name plus the alternate names in its profile). The UEI is the answer key and is never a matcher input. Entities are split by a hash of the UEI: 381 for development, 367 for test (1,138 records). One tuned number per matcher was chosen on development and frozen; the test split was scored once. Records carry names only (no addresses or tax IDs in this data).
 
 ## Test results (367 entities, 1,138 records)
 

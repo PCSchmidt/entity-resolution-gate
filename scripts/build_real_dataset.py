@@ -32,7 +32,7 @@ def build(
     names: dict[str, set[str]] = {}
     for row in profile_rows:
         prof = row.get("profile")
-        uei = row.get("uei")
+        uei = row.get("uei") or (prof.get("uei") if isinstance(prof, dict) else None)
         if not isinstance(prof, dict) or not isinstance(uei, str) or not uei:
             continue
         if exclude and uei in exclude:

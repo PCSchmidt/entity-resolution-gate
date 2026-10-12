@@ -145,9 +145,15 @@ def fuzzy_labels(sp: Split, t: float) -> IntArray:
 
 
 class SplinkID:
-    """Splink with name, postcode and registry-ID comparisons, blocked within the slice."""
+    """Splink with name, postcode and registry-ID comparisons, blocked within the slice.
 
-    def __init__(self, sp: Split, q: float) -> None:
+    mode "unsup": expectation-maximisation, as pre-registered. mode "sup": m values estimated from the labelled
+    pairs of the split it is built on (Deviation 4). `trained` reuses a saved model on another split.
+    """
+
+    def __init__(
+        self, sp: Split, q: float, mode: str = "unsup", trained: dict[str, Any] | None = None
+    ) -> None:
         vis = sp.visible(q)
         toks = [s.split() for s in sp.names]
         pdf = pd.DataFrame(
@@ -163,23 +169,43 @@ class SplinkID:
                 "registry_id": vis,
             }
         )
-        settings = SettingsCreator(
-            link_type="dedupe_only",
-            comparisons=[cl.JaroWinklerAtThresholds("name", [0.92, 0.80]), cl.ExactMatch("zip"), cl.ExactMatch("registry_id")],
-            blocking_rules_to_generate_predictions=[block_on("slice", "first_token"), block_on("slice", "first3"), block_on("registry_id")],
-            probability_two_random_records_match=0.001,
-        )  # fmt: skip
+        settings: Any = trained
+        if trained is None:
+            settings = SettingsCreator(
+                link_type="dedupe_only",
+                comparisons=[cl.JaroWinklerAtThresholds("name", [0.92, 0.80]), cl.ExactMatch("zip"), cl.ExactMatch("registry_id")],
+                blocking_rules_to_generate_predictions=[block_on("slice", "first_token"), block_on("slice", "first3"), block_on("registry_id")],
+                probability_two_random_records_match=0.001,
+            )  # fmt: skip
         self.linker = Linker(DuckDBAPI().register(pdf), settings, log_level="ERROR")
-        self.linker.training.estimate_u_using_random_sampling(max_pairs=5_000_000, seed=0)
-        self.linker.training.estimate_parameters_using_expectation_maximisation(
-            block_on("slice", "first_token")
-        )
-        if q > 0:
-            self.linker.training.estimate_parameters_using_expectation_maximisation(
-                block_on("registry_id")
-            )
+        if trained is None:
+            self.linker.training.estimate_u_using_random_sampling(max_pairs=5_000_000, seed=0)
+            if mode == "unsup":
+                self.linker.training.estimate_parameters_using_expectation_maximisation(
+                    block_on("slice", "first_token")
+                )
+                if q > 0:
+                    self.linker.training.estimate_parameters_using_expectation_maximisation(
+                        block_on("registry_id")
+                    )
+            else:
+                by_entity: dict[int, list[int]] = {}
+                for i, e in enumerate(sp.ent.tolist()):
+                    by_entity.setdefault(e, []).append(i)
+                pairs = [
+                    (a, b) for m in by_entity.values() for k, a in enumerate(m) for b in m[k + 1 :]
+                ]
+                labels = pd.DataFrame(
+                    {"unique_id_l": [a for a, _ in pairs], "unique_id_r": [b for _, b in pairs]}
+                )
+                self.linker.table_management.register_table(labels, "labels", overwrite=True)
+                self.linker.training.estimate_m_from_pairwise_labels("labels")  # type: ignore[no-untyped-call]
         self.pred = self.linker.inference.predict(threshold_match_probability=min(SPLINK_GRID))
         self.sp = sp
+
+    def model(self) -> dict[str, Any]:
+        out: dict[str, Any] = self.linker.misc.save_model_to_json()
+        return out
 
     def labels(self, p: float) -> IntArray:
         df = self.linker.clustering.cluster_pairwise_predictions_at_threshold(
@@ -242,15 +268,20 @@ def run_dev() -> None:
                 flush=True,
             )
         for q in Q_LEVELS:
-            si = SplinkID(sp, q)
-            sc = {p: b3_f1(sp, si.labels(p)) for p in SPLINK_GRID}
-            key = f"splink_id@{q}"
-            frozen[key] = best_of(sc)
-            sweeps[key] = {"best": frozen[key], "f1": sc[frozen[key]]}
-            print(
-                f"{key}: dev B-cubed F1 {sc[frozen[key]]:.4f} at {frozen[key]}  ({time.perf_counter() - t0:.0f}s)",
-                flush=True,
-            )
+            for mode, base_key in (("unsup", "splink_id"), ("sup", "splink_id_sup")):
+                si = SplinkID(sp, q, mode)
+                sc = {p: b3_f1(sp, si.labels(p)) for p in SPLINK_GRID}
+                key = f"{base_key}@{q}"
+                frozen[key] = best_of(sc)
+                sweeps[key] = {"best": frozen[key], "f1": sc[frozen[key]]}
+                if mode == "sup":
+                    (OUT / f"splink_sup_model_q{q}.json").write_text(
+                        json.dumps(si.model()), encoding="utf-8"
+                    )
+                print(
+                    f"{key}: dev B-cubed F1 {sc[frozen[key]]:.4f} at {frozen[key]}  ({time.perf_counter() - t0:.0f}s)",
+                    flush=True,
+                )
     (OUT / "dev_sweep.json").write_text(json.dumps(sweeps, indent=1))
     (OUT / "frozen.json").write_text(json.dumps(frozen, indent=1))
     print("frozen:", frozen)
@@ -308,14 +339,15 @@ def pct(a: npt.NDArray[np.float64], lo: float = 2.5, hi: float = 97.5) -> list[f
     return [float(np.percentile(a, lo)), float(np.percentile(a, hi))]
 
 
-def run_heldout() -> None:
-    out_path = OUT / "heldout_results.json"
+def run_heldout(smoke: bool = False) -> None:
+    """Score the held-out slices once. `smoke` runs the same code on the DEVELOPMENT slices (a plumbing check)."""
+    out_path = OUT / ("smoke_dev_results.json" if smoke else "heldout_results.json")
     if out_path.exists():
         sys.exit(
             "heldout_results.json exists; this stage is one-shot (delete it deliberately to re-run)"
         )
     frozen = json.loads((OUT / "frozen.json").read_text())
-    sp = Split("heldout")
+    sp = Split("dev" if smoke else "heldout")
     n_sl = len(sp.slices)
     rng = np.random.default_rng(0)
     draws = [
@@ -343,6 +375,11 @@ def run_heldout() -> None:
                 stats[key] = slice_stats(sp, pipeline_labels(sp, pool, v, frozen[key], q), vis)
             si = SplinkID(sp, q)
             stats[f"splink_id@{q}"] = slice_stats(sp, si.labels(frozen[f"splink_id@{q}"]), vis)
+            model = json.loads((OUT / f"splink_sup_model_q{q}.json").read_text(encoding="utf-8"))
+            sup = SplinkID(sp, q, trained=model)
+            stats[f"splink_id_sup@{q}"] = slice_stats(
+                sp, sup.labels(frozen[f"splink_id_sup@{q}"]), vis
+            )
             print(f"q={q} done", flush=True)
     names = {f"{n}": stats[f"{n}#vis{PRIMARY_Q}"] for n in base} | {
         k: v for k, v in stats.items() if "@" in k
@@ -386,6 +423,7 @@ def run_heldout() -> None:
             "G3a_P_veto_minus_P_addr_ci97_5": contrast(f"P_veto@{q}", pa, band=(1.25, 98.75)),
             "G3b_P_match_minus_P_addr_ci97_5": contrast(f"P_match@{q}", pa, band=(1.25, 98.75)),
             "G4_P_full_minus_splink_id": contrast(f"P_full@{q}", f"splink_id@{q}"),
+            "G4b_P_full_minus_splink_id_sup": contrast(f"P_full@{q}", f"splink_id_sup@{q}"),
             "G5_P_addr_minus_P_name": contrast(pa, f"P_name#vis{q}"),
             "pairwise_P_full_minus_P_addr": contrast(f"P_full@{q}", pa, "pw_f1"),
             "ref_P_full_minus_no_merge": contrast(f"P_full@{q}", f"no_merge#vis{q}"),
@@ -409,9 +447,12 @@ def run_heldout() -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("stage", choices=["dev", "heldout"])
+    ap.add_argument("stage", choices=["dev", "heldout", "smoke"])
     a = ap.parse_args()
-    {"dev": run_dev, "heldout": run_heldout}[a.stage]()
+    if a.stage == "smoke":
+        run_heldout(smoke=True)
+    else:
+        {"dev": run_dev, "heldout": run_heldout}[a.stage]()
 
 
 if __name__ == "__main__":

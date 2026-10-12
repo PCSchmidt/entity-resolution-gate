@@ -76,4 +76,8 @@ UK company register only, live companies, so it is not federal contractor data a
 
 ## Deviations
 
-None yet.
+Made after the **development** stage and **before the held-out slices were scored**. Only development numbers had been seen.
+
+1. **A no-merge reference row was added.** On development, a trivial matcher that links nothing (every record its own cluster) scores B-cubed F1 0.902, above every tuned name-only matcher (0.8986 to 0.8996) and above the veto alone at q = 0.25 and 0.5. Most true pairs in these slices are renames that no name similarity can recover, while numbered-series lookalikes punish any loose threshold, so the tuned optimum for name-only matching collapses toward "link nothing". Without that reference the other rows are hard to read. The held-out run therefore reports `no_merge`, and three descriptive contrasts against it (`P_full`, `P_addr`, `fuzzy`). It is a reference row, not a competitor in any pre-stated criterion.
+2. **Noted, not changed: several tuned thresholds sit at the top of their grids** (fuzzy 99; `P_name`, `P_addr`, `P_veto` at q = 0.25 and 0.5, `P_match`, `P_full`, all 0.99, the fine grid's upper limit). Their true optimum is the no-merge limit, which no threshold on this score reaches; the no-merge row shows what that limit scores. The grids were left as pre-registered.
+3. **q = 1.0 is a ceiling, not a test.** With every record carrying its ID, `P_full` scores F1 1.000 on development (the ID alone identifies the company). Results at q = 1.0 show the best case and should not be read as evidence about the gate versus similarity.

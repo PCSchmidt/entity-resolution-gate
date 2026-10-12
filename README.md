@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/PCSchmidt/entity-resolution-gate/actions/workflows/ci.yml/badge.svg)
 
-**Status: v0.2, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records, and a **pilot real-data study on federal-contractor names** has been run under a protocol written in advance. It used an alphabetical-prefix sample (names beginning with a digit or "A"), not a random one, so it is not evidence about contractor names in general: the pipeline beat a tuned fuzzy matcher by a narrow margin on one month and did not on a second ([Results](#results)). A random-sample study is under way. The hard tax-ID rule could not be tested on public data, and the 100k+ record benchmark is not done.
+**Status: v0.2, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records. A **real-data study on a random sample of Department of Defense contract recipients** (1,527 held-out entities; protocol written in advance, scored once) found the name-only pipeline ahead of a tuned plain fuzzy matcher by 2.6 B-cubed F1 points (95% interval +1.9 to +3.3), better blocking not helping, and a token-sort-only score hurting ([Results](#results)). An earlier alphabetical-prefix pilot is superseded. The hard tax-ID rule could not be tested on public data, and the 100k+ record benchmark is not done.
 
 ```text
 $ python examples/demo.py                      # 7 vendor records; entity_id is the hidden truth
@@ -58,7 +58,7 @@ It is a poor fit if your records have no reliable identifier to constrain on, if
 
 Any similarity score can be fooled by two look-alike companies. A rule that holds regardless of the score is the only thing that makes a merge guarantee possible. The score decides what is *likely*; the constraints decide what is *allowed*.
 
-**What's real and what's not.** The pipeline, the constraints, the audit log and the benchmark run today and are tested, including a property test that no cluster ever contains two tax IDs. The scale and constraint claims rest on **synthetic data**. A name-only study on real USAspending names exists ([docs/RESULTS_REAL.md](docs/RESULTS_REAL.md)), but public data has no tax IDs or alternate-name addresses, so the constraint and address scoring were not exercised on real data.
+**What's real and what's not.** The pipeline, the constraints, the audit log and the benchmark run today and are tested, including a property test that no cluster ever contains two tax IDs. The scale and constraint claims rest on **synthetic data**. A name-only study on a random sample of real USAspending recipients exists ([docs/RESULTS_SAMPLE.md](docs/RESULTS_SAMPLE.md)), but public data has no tax IDs or alternate-name addresses, so the constraint and address scoring were not exercised on real data.
 
 ## At a glance
 
@@ -68,10 +68,10 @@ Any similarity score can be fooled by two look-alike companies. A rule that hold
 | Output | the same table plus `cluster_id`, and an audit log |
 | Guarantee | no cluster contains two different non-null tax IDs (property-tested over seeds, trap rates and thresholds) |
 | Measured (synthetic, held-out seeds) | F1 0.91 at 2,000 records, 0.80 at 39,000 records; 0 tax-ID violations in every run |
-| Measured (real USAspending names, name-only, **pilot: names starting with a digit or "A" only**) | January: F1 0.763 against 0.732 for tuned plain fuzzy matching (+0.031, 95% interval +0.004 to +0.059). July, fresh entities: 0.507 against 0.549, no advantage. Not a random sample |
+| Measured (real USAspending names, random sample, name-only) | held-out B-cubed F1 0.911 against 0.885 for tuned plain fuzzy matching (+0.026, 95% interval +0.019 to +0.034) and 0.893 for Splink; 17% of true pairs are renames no string method finds |
 | Speed | 39,369 records in 6.7 s on one machine, single thread |
 | Stack | Polars, DuckDB, NetworkX, RapidFuzz, jellyfish (Metaphone) |
-| Tests | 15, including property-based; `mypy --strict`; ruff |
+| Tests | 31, including property-based; `mypy --strict`; ruff |
 
 ## Architecture at a glance
 
@@ -132,7 +132,7 @@ uv venv && uv pip install -e ".[dev]"
 
 python examples/demo.py              # the output shown above
 python scripts/benchmark.py          # the held-out synthetic table below
-pytest -q                            # 15 passed
+pytest -q                            # 31 passed
 ```
 
 ```python
@@ -181,34 +181,37 @@ Synthetic data only: typos, case changes, trading prefixes and suffixes, address
 - Quality falls at 20,000 entities. The synthetic name space has only 4,032 base names, so many distinct vendors collide; this is partly the generator and partly a real scaling cost, and the two are not separated here.
 - Two design flaws were found by running the benchmark: a threshold of 0.82 chained unrelated vendors into one component (precision 0.61), and single-token blocking keys collapsed recall to 0.005 at 5,000 entities. Both are fixed and described in [docs/RESULTS.md](docs/RESULTS.md).
 
-### Real data, pilot: federal-contractor names (USAspending, alphabetical prefix)
+### Real data: federal-contractor names (USAspending, random sample)
 
-> **Sampling correction (found 2026-10-12): this is a pilot on a non-random sample.** The download read awards sorted by recipient name, and the API returned only the first 10,000 of about 568,000 matching awards for January 2024 (the same 10,000-award limit applied to July), so every record comes from recipients whose names begin with a digit, a symbol or the letter "A". It was not noticed earlier because the API reported no further pages. The numbers below describe that alphabetical prefix only: it over-represents look-alike "Advanced ..." style names and says little about federal contractor names in general. Earlier wording that called this a "census" was wrong. A new study on a random sample of all recipients is under way; see [docs/PROTOCOL_SAMPLE.md](docs/PROTOCOL_SAMPLE.md) when it is published.
+A study planned before any sampled name was downloaded ([docs/PROTOCOL_SAMPLE.md](docs/PROTOCOL_SAMPLE.md)) draws a simple random sample of 3,000 recipients of Department of Defense contracts in fiscal year 2024 from the full population of 45,959, and scores nine matchers on 1,527 held-out registry entities (4,542 name strings), with the registry's own identifier as the hidden answer key. Each matcher has one number tuned on development data and the held-out half was scored once. The metric is B-cubed F1 (precision and recall averaged over records, so one very large entity cannot dominate).
 
-
-A separate study, planned before any matcher was run ([docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md)), scores four matchers on 367 held-out registry entities (1,138 name strings), with the registry's own identifier as the hidden answer key. Each matcher has one number tuned on development data; the test split was scored once.
-
-| Matcher | Precision | Recall | F1 |
+| Matcher | Precision | Recall | F1 [95% interval] |
 | --- | --- | --- | --- |
-| Exact normalised name | 0.927 | 0.556 | 0.695 |
-| Plain fuzzy, tuned | 0.886 | 0.623 | 0.732 |
-| Splink (two configurations) | 0.927 / 0.897 | 0.556 / 0.592 | 0.695 / 0.713 |
-| **This pipeline, tuned** | 0.876 | 0.675 | **0.763** |
-| This pipeline, default threshold | 0.888 | 0.636 | 0.741 |
+| Exact normalised name | 0.994 | 0.727 | 0.840 [0.821, 0.857] |
+| Plain fuzzy, tuned | 0.977 | 0.809 | 0.885 [0.870, 0.898] |
+| Splink, one comparison | 0.988 | 0.814 | 0.893 [0.878, 0.907] |
+| **This pipeline, tuned** | 0.974 | 0.855 | **0.911** [0.898, 0.922] |
+| Pipeline with the extra blocking keys | 0.958 | 0.875 | 0.915 [0.903, 0.925] |
+| Pipeline, token-sort-only score | 0.958 | 0.836 | 0.893 [0.880, 0.905] |
 
-- The tuned pipeline beats the tuned plain fuzzy matcher by 0.031 F1 (95% interval +0.004 to +0.059), mostly through recall. The untuned default does not (+0.009, interval spans zero). Read this as suggestive: a richer Splink variant was added after the first development run, and the interval's lower end is thin.
-- 17% of true pairs are renames that share almost no text; **no matcher recovers any of them**, so overall recall is capped near 0.83.
-- Of the findable pairs the pipeline misses, 75% were never proposed by blocking and 25% were scored and rejected, so better blocking is the larger lever (post-hoc finding, not yet tested as a fix).
-- Public data has no tax IDs, so this study does **not** test the hard constraint the design is built around.
+- The pipeline beats the tuned plain fuzzy matcher by 0.026 F1 (95% interval +0.019 to +0.034), through recall at about the same precision; the pairwise-F1 gap is larger (+0.070). Post-hoc, it also beats Splink by 0.018 (+0.012 to +0.025).
+- **Better blocking is not the lever.** Extra keys raise the share of findable true pairs proposed by 4 to 8 points at up to 1.7 times the candidates, but F1 moves by at most 0.004, not distinguishable from zero.
+- A token-sort-only name score, which I expected to help, was worse (-0.018), so the Jaro-Winkler part of the score earns its place.
+- 17% of true pairs are renames that share almost no text; **no matcher recovers any of them**.
+- Public data has no tax IDs or addresses, so this study does **not** test the hard constraint or address evidence the design is built around, and it cannot say the graph step is why the pipeline wins.
+- Three choices were changed after seeing development results and before the held-out half was scored (the primary metric, one excluded pass-through entity, wider threshold grids); all are logged in the protocol, and the key result holds under pairwise F1 and with the largest entities removed.
+
+An earlier **pilot** used only the first 10,000 awards per month in name order, so it sampled names beginning with a digit or "A"; its results ([docs/RESULTS_REAL.md](docs/RESULTS_REAL.md), [docs/RESULTS_BLOCKING.md](docs/RESULTS_BLOCKING.md)) are kept, with a correction notice, but are superseded.
 
 ## Limitations
 
-- **Constraint and scale claims are synthetic-only.** The real-data study covers names only, one month and one agency; mergers, subsidiaries and transliteration are barely represented.
+- **Constraint and scale claims are synthetic-only.** The real-data study covers names only, one agency and one fiscal year; mergers, subsidiaries and transliteration are barely represented.
+- **The answer key is noisy.** The registry's alias lists sometimes include unrelated organisations (one sampled entity had 256 aliases and was excluded; a few others list several institutions), so absolute scores are approximate.
 - **One hard rule.** Only the tax-ID contradiction is enforced. CAGE codes, parent-subsidiary rules and other absolute constraints are not built.
 - **Missing identifiers defeat the gate.** A record with no tax ID can be grouped with the wrong twin, as the demo shows; the gate guarantees consistency, not correctness.
 - **Thresholds are not portable.** 0.93 and density 0.5 were picked on synthetic data and will need re-tuning.
 - **Small name space.** The generator saturates near 20,000 entities, so the largest rows are pessimistic in a way unrelated to the algorithm.
-- **Not at scale.** No 100k+ run and no F1-versus-latency curve. Splink was compared only on the small real-data study, with a fixed hand-set configuration.
+- **Not at scale.** No 100k+ run and no F1-versus-latency curve. Splink was compared only on the real-data study, with a fixed hand-set configuration, so that comparison says little about a tuned Splink.
 - **No embeddings or extra features** (executive names, geography, vector search) yet.
 
 ## Operational notes
@@ -224,20 +227,22 @@ No keys. The benchmark data is generated from a seed. Real data later should com
 ### Verify the claims (a reviewer's path)
 
 ```bash
-pytest -q                         # 15 passed, includes the property test of the guarantee
+pytest -q                         # 31 passed, includes the property test of the guarantee
 mypy src tests scripts            # strict, clean
 python examples/demo.py           # the table and audit log shown at the top
 python scripts/benchmark.py       # the held-out synthetic table
 ```
 
-The real-data study needs the `study` extra and a download from the public USAspending API; the exact commands are in [docs/RESULTS_REAL.md](docs/RESULTS_REAL.md#reproduce). The test stage refuses to run twice.
+The real-data study needs the `study` extra and a download from the public USAspending API; the exact commands are in [docs/RESULTS_SAMPLE.md](docs/RESULTS_SAMPLE.md#reproduce). The held-out stage refuses to run twice.
 
 ### Documentation map
 
 | Doc | What it covers |
 | --- | --- |
-| [docs/RESULTS_REAL.md](docs/RESULTS_REAL.md) | the real-data study: results, criteria, the rename ceiling, where recall is lost |
-| [docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md) | its plan, written before any matcher was run, and the two deviations |
+| [docs/RESULTS_SAMPLE.md](docs/RESULTS_SAMPLE.md) | the random-sample real-data study: results, criteria, post-hoc checks, limits |
+| [docs/PROTOCOL_SAMPLE.md](docs/PROTOCOL_SAMPLE.md) | its plan, written before any sampled name was downloaded, and the four deviations |
+| [docs/RESULTS_REAL.md](docs/RESULTS_REAL.md), [docs/RESULTS_BLOCKING.md](docs/RESULTS_BLOCKING.md) | the superseded alphabetical-prefix pilot, kept with a correction notice |
+| [docs/PROTOCOL_REAL.md](docs/PROTOCOL_REAL.md), [docs/PROTOCOL_BLOCKING.md](docs/PROTOCOL_BLOCKING.md) | the pilot's plans and deviations |
 | [docs/RESULTS.md](docs/RESULTS.md) | synthetic protocol, the table, how to read it, the two development findings |
 | [examples/demo.py](examples/demo.py) | the worked example above |
 | [src/entity_resolution_gate/pipeline.py](src/entity_resolution_gate/pipeline.py) | blocking, scoring and the graph gate |

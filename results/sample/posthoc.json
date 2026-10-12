@@ -1,0 +1,71 @@
+{
+ "paired_f1_pipeline_base_minus": {
+  "exact": {
+   "point": 0.07088406248476753,
+   "ci95": [
+    0.05962256765991808,
+    0.08316405754453325
+   ]
+  },
+  "fuzzy": {
+   "point": 0.025996877414449338,
+   "ci95": [
+    0.019206606670781237,
+    0.033481010029633704
+   ]
+  },
+  "splink": {
+   "point": 0.01785716843901408,
+   "ci95": [
+    0.011579667875645428,
+    0.024836568947635716
+   ]
+  },
+  "splink_rich": {
+   "point": 0.027614850483883457,
+   "ci95": [
+    0.019743257166386294,
+    0.03513273629973332
+   ]
+  }
+ },
+ "rename_ceiling": {
+  "true_pairs": 8493,
+  "findable_true_pairs": 7043,
+  "share_not_findable": 0.1707288355115978,
+  "baseline_findable_missed": 1183,
+  "baseline_findable_missed_never_scored": 877,
+  "baseline_findable_missed_scored_then_not_linked": 306
+ },
+ "entity_sizes": {
+  "records_per_entity_median": 3.0,
+  "max": 32,
+  "top5_sizes": [
+   32,
+   30,
+   27,
+   26,
+   21
+  ],
+  "top5_share_of_true_pairs": 0.21394089249970563,
+  "entities_with_more_than_20_names": 6
+ },
+ "sensitivity_without_entities_over_20_names": {
+  "records": 4385,
+  "entities": 1521,
+  "pipeline_base_f1": 0.9183935522129321,
+  "fuzzy_f1": 0.895647408803009,
+  "difference": 0.022746143409923092,
+  "ci95": [
+   0.0169379254878089,
+   0.028407248488543944
+  ]
+ },
+ "pipelines_evaluated": [
+  "pipeline_base",
+  "pipeline_squash",
+  "pipeline_squash_first",
+  "pipeline_squash_first_wide",
+  "pipeline_token_sort"
+ ]
+}

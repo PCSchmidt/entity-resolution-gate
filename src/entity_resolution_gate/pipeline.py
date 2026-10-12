@@ -23,6 +23,7 @@ def normalise(name: str) -> str:
 
 
 BLOCKING_MODES = ("base", "squash", "squash_first", "squash_first_wide")
+SPLIT_MODES = ("louvain", "tax_only", "none")
 
 
 def block_keys(name: str, mode: str = "base") -> set[str]:
@@ -66,6 +67,7 @@ class Config:
     tax_match: bool = True  # two equal non-null tax ids are certain evidence of one entity
     tax_blocking: bool = False  # also propose every pair of records that share a tax id (needed for renames)
     name_score: str = "max"  # "max": larger of Jaro-Winkler and token-sort (original); "token_sort": token-sort only
+    split: str = "louvain"  # graph step: "louvain" (original: split on tax conflict or sparse chain), "tax_only", "none"
 
 
 @dataclass
@@ -164,6 +166,8 @@ def _split(
 def resolve(df: pl.DataFrame, cfg: Config | None = None) -> tuple[pl.DataFrame, AuditLog]:
     """Returns (df with `cluster_id`, audit log). Every merge is traceable to scored edges."""
     cfg = cfg or Config()
+    if cfg.split not in SPLIT_MODES:
+        raise ValueError(f"unknown split mode {cfg.split!r}")
     log = AuditLog()
     rec = {int(r["rid"]): r for r in df.iter_rows(named=True)}
     tax = {rid: (r["tax_id"] if cfg.tax_veto else None) for rid, r in rec.items()}
@@ -182,7 +186,11 @@ def resolve(df: pl.DataFrame, cfg: Config | None = None) -> tuple[pl.DataFrame, 
     assignment: dict[int, int] = {}
     cid = 0
     for comp in nx.connected_components(g):
-        for part in _split(g.subgraph(comp).copy(), tax, log, cfg.min_density):
+        if cfg.split == "none":  # ablation: connected components of the thresholded graph, no splitting
+            parts = [set(comp)]
+        else:  # "tax_only" switches the sparse-chain criterion off (density is never below 0)
+            parts = _split(g.subgraph(comp).copy(), tax, log, cfg.min_density if cfg.split == "louvain" else 0.0)
+        for part in parts:
             for n in part:
                 assignment[n] = cid
             cid += 1

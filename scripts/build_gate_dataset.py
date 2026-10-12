@@ -64,6 +64,10 @@ def main() -> None:
     ap.add_argument("--slices", type=int, default=60)
     ap.add_argument("--width", type=int, default=800)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument(
+        "--exclude-from", type=Path, default=None,
+        help="records file whose companies (entity_id) are dropped, to build slices disjoint from an earlier set",
+    )  # fmt: skip
     args = ap.parse_args()
 
     df = pl.read_parquet(args.parquet)
@@ -85,6 +89,14 @@ def main() -> None:
     )
     dropped = multi.height
     members = in_slice.join(multi.select("CompanyNumber"), on="CompanyNumber", how="anti")
+    if args.exclude_from is not None:
+        used = {
+            json.loads(x)["entity_id"]
+            for x in args.exclude_from.read_text(encoding="utf-8").splitlines()
+        }
+        before = members["CompanyNumber"].n_unique()
+        members = members.filter(~pl.col("CompanyNumber").is_in(list(used)))
+        print(f"excluded {before - members['CompanyNumber'].n_unique()} companies already used in {args.exclude_from}")
     addr = df.select(
         "CompanyNumber",
         pl.concat_str(

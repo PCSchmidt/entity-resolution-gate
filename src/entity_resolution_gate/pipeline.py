@@ -62,6 +62,9 @@ class Config:
     w_name: float = 0.7
     w_addr: float = 0.3
     blocking: str = "base"  # see block_keys; "base" reproduces the original behaviour
+    tax_veto: bool = True  # two different non-null tax ids can never be one entity
+    tax_match: bool = True  # two equal non-null tax ids are certain evidence of one entity
+    tax_blocking: bool = False  # also propose every pair of records that share a tax id (needed for renames)
     name_score: str = "max"  # "max": larger of Jaro-Winkler and token-sort (original); "token_sort": token-sort only
 
 
@@ -75,6 +78,8 @@ class AuditLog:
 
 def candidate_pairs(df: pl.DataFrame, cfg: Config, log: AuditLog) -> list[tuple[int, int]]:
     rows = [(r, k) for r, n in zip(df["rid"], df["name"], strict=True) for k in block_keys(n, cfg.blocking)]
+    if cfg.tax_blocking:
+        rows += [(r, "id:" + t) for r, t in zip(df["rid"], df["tax_id"], strict=True) if t]
     keys = pl.DataFrame(rows, schema={"rid": pl.Int64, "k": pl.Utf8}, orient="row")
     con = duckdb.connect()
     con.register("keys", keys.to_arrow())
@@ -95,12 +100,14 @@ def candidate_pairs(df: pl.DataFrame, cfg: Config, log: AuditLog) -> list[tuple[
 
 
 def pair_score(a: dict[str, Any], b: dict[str, Any], cfg: Config) -> float:
-    if a["tax_id"] and a["tax_id"] == b["tax_id"]:
+    if cfg.tax_match and a["tax_id"] and a["tax_id"] == b["tax_id"]:
         return 1.0  # same verified tax id: positive evidence, independent of spelling
     na, nb = normalise(a["name"]), normalise(b["name"])
     tsr = fuzz.token_sort_ratio(na, nb) / 100.0
     name = tsr if cfg.name_score == "token_sort" else max(JaroWinkler.similarity(na, nb), tsr)
-    addr = fuzz.ratio((a["address"] or "").lower(), (b["address"] or "").lower()) / 100.0
+    if not (a["address"] and b["address"]):
+        return name  # a missing address is no evidence either way (two empty strings are not a match)
+    addr = fuzz.ratio(a["address"].lower(), b["address"].lower()) / 100.0
     if a["zip"] and b["zip"] and a["zip"] != b["zip"]:
         addr *= 0.5
     return cfg.w_name * name + cfg.w_addr * addr
@@ -159,13 +166,13 @@ def resolve(df: pl.DataFrame, cfg: Config | None = None) -> tuple[pl.DataFrame, 
     cfg = cfg or Config()
     log = AuditLog()
     rec = {int(r["rid"]): r for r in df.iter_rows(named=True)}
-    tax = {rid: r["tax_id"] for rid, r in rec.items()}
+    tax = {rid: (r["tax_id"] if cfg.tax_veto else None) for rid, r in rec.items()}
     g: nx.Graph[int] = nx.Graph()
     g.add_nodes_from(rec)
     pairs = candidate_pairs(df, cfg, log)
     log.add("candidates", n=len(pairs))
     for a, b in pairs:
-        if contradicts(rec[a], rec[b]):
+        if cfg.tax_veto and contradicts(rec[a], rec[b]):
             log.add("edge_blocked", a=a, b=b, reason="tax_id_contradiction")
             continue
         s = pair_score(rec[a], rec[b], cfg)

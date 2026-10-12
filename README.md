@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/PCSchmidt/entity-resolution-gate/actions/workflows/ci.yml/badge.svg)
 
-**Status: v0.2, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records. A **real-data study on a random sample of Department of Defense contract recipients** (1,527 held-out entities; protocol written in advance, scored once) found the name-only pipeline ahead of a tuned plain fuzzy matcher by 2.6 B-cubed F1 points (95% interval +1.9 to +3.3), better blocking not helping, and a token-sort-only score hurting ([Results](#results)). An earlier alphabetical-prefix pilot is superseded. The hard tax-ID rule could not be tested on public data, and the 100k+ record benchmark is not done.
+**Status: v0.2, portfolio project.** Blocking, scoring, the graph gate, an audit log, a synthetic data generator and a benchmark are built and tested. The synthetic benchmark reaches 39,369 records. Two real-data studies, each with a protocol written in advance and a held-out half scored once: on a **random sample of Department of Defense contract recipients** the name-only pipeline beat a tuned plain fuzzy matcher by 2.6 B-cubed F1 points (95% interval +1.9 to +3.3) and better blocking did not help; and on **UK company register data with a registry ID on half the records** the full gate (hard veto plus same-ID evidence) beat the same pipeline without the ID by 2.7 points (+2.5 to +2.9), almost entirely through the same-ID evidence, with zero rule-breaking clusters against 49 without the veto ([Results](#results)). The registry ID is a company number, not a tax ID, and the 100k+ record benchmark is not done.
 
 ```text
 $ python examples/demo.py                      # 7 vendor records; entity_id is the hidden truth
@@ -58,7 +58,7 @@ It is a poor fit if your records have no reliable identifier to constrain on, if
 
 Any similarity score can be fooled by two look-alike companies. A rule that holds regardless of the score is the only thing that makes a merge guarantee possible. The score decides what is *likely*; the constraints decide what is *allowed*.
 
-**What's real and what's not.** The pipeline, the constraints, the audit log and the benchmark run today and are tested, including a property test that no cluster ever contains two tax IDs. The scale and constraint claims rest on **synthetic data**. A name-only study on a random sample of real USAspending recipients exists ([docs/RESULTS_SAMPLE.md](docs/RESULTS_SAMPLE.md)), but public data has no tax IDs or alternate-name addresses, so the constraint and address scoring were not exercised on real data.
+**What's real and what's not.** The pipeline, the constraints, the audit log and the benchmark run today and are tested, including a property test that no cluster ever contains two tax IDs. The scale claims rest on **synthetic data**. A name-only study on a random sample of real USAspending recipients exists ([docs/RESULTS_SAMPLE.md](docs/RESULTS_SAMPLE.md)). The hard constraint has now also been tested on real identifiers ([docs/RESULTS_GATE.md](docs/RESULTS_GATE.md)), with UK company numbers standing in for tax IDs and their availability simulated, so it is evidence about the mechanism, not about tax IDs.
 
 ## At a glance
 
@@ -69,9 +69,10 @@ Any similarity score can be fooled by two look-alike companies. A rule that hold
 | Guarantee | no cluster contains two different non-null tax IDs (property-tested over seeds, trap rates and thresholds) |
 | Measured (synthetic, held-out seeds) | F1 0.91 at 2,000 records, 0.80 at 39,000 records; 0 tax-ID violations in every run |
 | Measured (real USAspending names, random sample, name-only) | held-out B-cubed F1 0.911 against 0.885 for tuned plain fuzzy matching (+0.026, 95% interval +0.019 to +0.034) and 0.893 for Splink; 17% of true pairs are renames no string method finds |
+| Measured (real UK company register, registry ID visible on 50% of records) | held-out B-cubed F1 0.928 for the full gate against 0.901 without the ID (+0.027, 95% interval +0.025 to +0.029); 0 clusters break the ID rule against 49; a supervised Splink gets within 0.5 points but with 29 rule-breaking clusters |
 | Speed | 39,369 records in 6.7 s on one machine, single thread |
 | Stack | Polars, DuckDB, NetworkX, RapidFuzz, jellyfish (Metaphone) |
-| Tests | 31, including property-based; `mypy --strict`; ruff |
+| Tests | 37, including property-based; `mypy --strict`; ruff |
 
 ## Architecture at a glance
 
@@ -132,7 +133,7 @@ uv venv && uv pip install -e ".[dev]"
 
 python examples/demo.py              # the output shown above
 python scripts/benchmark.py          # the held-out synthetic table below
-pytest -q                            # 31 passed
+pytest -q                            # 37 passed
 ```
 
 ```python
@@ -203,9 +204,30 @@ A study planned before any sampled name was downloaded ([docs/PROTOCOL_SAMPLE.md
 
 An earlier **pilot** used only the first 10,000 awards per month in name order, so it sampled names beginning with a digit or "A"; its results ([docs/RESULTS_REAL.md](docs/RESULTS_REAL.md), [docs/RESULTS_BLOCKING.md](docs/RESULTS_BLOCKING.md)) are kept, with a correction notice, but are superseded.
 
+### Real identifiers: does the hard rule matter? (UK company register)
+
+A third study ([docs/PROTOCOL_GATE.md](docs/PROTOCOL_GATE.md), written before any matcher ran) tests the design's central idea directly. It uses the UK Companies House register: each company's current and previous names are the records, the company number is the answer key and, on a random half of records, a **registry ID** the pipeline may use. Sixty dense name neighbourhoods (800 names each, 30 development and 30 held-out, each a separate deduplication job) keep the lookalike companies that the rule exists for. The metric is B-cubed F1; **read it against a no-merge row, which scores 0.903 because 83% of companies have one name**.
+
+| Held-out, ID visible on 50% of records | B-cubed F1 [95%] | Pairwise F1 | Clusters with two different IDs |
+| --- | --- | --- | --- |
+| No merge (reference) | 0.903 | 0.000 | 0 |
+| Plain fuzzy | 0.900 | 0.017 | 67 |
+| Pipeline, name and address, ID ignored | 0.901 [0.895, 0.907] | 0.022 | 49 |
+| + hard veto only | 0.902 | 0.022 | **0** |
+| + same-ID evidence only | 0.927 | 0.405 | 48 |
+| **+ both (the full gate)** | **0.928** [0.923, 0.932] | 0.408 | **0** |
+| Splink trained on labelled development pairs | 0.923 | 0.349 | 29 |
+
+- The full gate beats the same pipeline without the ID by **0.027 F1** (+0.025 to +0.029) and improves **all 30 held-out slices**. Almost all of that is the **same-ID evidence** (+0.026), which recovers renames that no name similarity can; the veto alone adds only +0.0007.
+- **The guarantee holds on real data:** zero clusters contain two different visible IDs, against 49 to 77 without the veto, and the veto prevents 66 to 93 wrongly merged record pairs.
+- **Name similarity alone does not beat linking nothing here** (tuned fuzzy matching is 0.003 below the no-merge row): most true pairs are renames and numbered-series lookalikes punish any loose threshold.
+- A supervised Splink gets within 0.5 points on F1, but with 1,349 wrongly merged pairs and 29 clusters that break the ID rule; an unsupervised one learned the wrong solution on this data and linked nothing.
+- The effect scales with how often the ID is visible (+0.007 at 25%, +0.027 at 50%; at 100% it is a ceiling), and the veto matters only when IDs are visible on both records of a lookalike pair.
+- **Limits:** the identifier is a company number, not a tax ID; the 50% visibility is simulated; it is UK live companies only; and I did not ablate the graph-splitting step separately.
+
 ## Limitations
 
-- **Constraint and scale claims are synthetic-only.** The real-data study covers names only, one agency and one fiscal year; mergers, subsidiaries and transliteration are barely represented.
+- **Scale claims are synthetic-only.** The USAspending study covers names only, one agency and one fiscal year; the UK study uses a simulated identifier visibility and company numbers, not tax IDs. Mergers, subsidiaries and transliteration are barely represented.
 - **The answer key is noisy.** The registry's alias lists sometimes include unrelated organisations (one sampled entity had 256 aliases and was excluded; a few others list several institutions), so absolute scores are approximate.
 - **One hard rule.** Only the tax-ID contradiction is enforced. CAGE codes, parent-subsidiary rules and other absolute constraints are not built.
 - **Missing identifiers defeat the gate.** A record with no tax ID can be grouped with the wrong twin, as the demo shows; the gate guarantees consistency, not correctness.
@@ -222,12 +244,12 @@ Everything runs locally on one machine, single-threaded. No services, database s
 
 ### Data and keys
 
-No keys. The synthetic benchmark data is generated from a seed. The real-data study uses the public USAspending API (US government data, no key needed), downloaded on demand into a git-ignored `data/` folder and never committed; only derived numbers are in the repository. Any further real data should come from public sources (SAM.gov, SEC EDGAR) and never include non-public or employer data.
+No keys. The synthetic benchmark data is generated from a seed. The USAspending study uses the public API (US government data, no key needed). The registry-ID study uses the UK Companies House free company data snapshot (a public register of companies, not individuals); I did not find a licence statement on the pages I could read, so it is used for research only. Both are downloaded on demand into a git-ignored `data/` folder and never committed; only derived numbers are in the repository. SEC EDGAR and GLEIF refused automated requests without a contact address, and I did not work around that. Any further real data should come from public sources and never include non-public or employer data.
 
 ### Verify the claims (a reviewer's path)
 
 ```bash
-pytest -q                         # 31 passed, includes the property test of the guarantee
+pytest -q                         # 37 passed, includes the property test of the guarantee
 mypy src tests scripts            # strict, clean
 python examples/demo.py           # the table and audit log shown at the top
 python scripts/benchmark.py       # the held-out synthetic table
@@ -239,6 +261,8 @@ The real-data study needs the `study` extra and a download from the public USAsp
 
 | Doc | What it covers |
 | --- | --- |
+| [docs/RESULTS_GATE.md](docs/RESULTS_GATE.md) | the registry-ID study on UK company data: results, criteria, dose-response, limits |
+| [docs/PROTOCOL_GATE.md](docs/PROTOCOL_GATE.md) | its plan, written before any matcher ran, and the four deviations |
 | [docs/RESULTS_SAMPLE.md](docs/RESULTS_SAMPLE.md) | the random-sample real-data study: results, criteria, post-hoc checks, limits |
 | [docs/PROTOCOL_SAMPLE.md](docs/PROTOCOL_SAMPLE.md) | its plan, written before any sampled name was downloaded, and the four deviations |
 | [docs/RESULTS_REAL.md](docs/RESULTS_REAL.md), [docs/RESULTS_BLOCKING.md](docs/RESULTS_BLOCKING.md) | the superseded alphabetical-prefix pilot, kept with a correction notice |

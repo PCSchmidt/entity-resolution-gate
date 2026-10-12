@@ -222,7 +222,7 @@ Everything runs locally on one machine, single-threaded. No services, database s
 
 ### Data and keys
 
-No keys. The benchmark data is generated from a seed. Real data later should come from public sources (USASpending, SAM.gov, SEC EDGAR) and never include non-public or employer data.
+No keys. The synthetic benchmark data is generated from a seed. The real-data study uses the public USAspending API (US government data, no key needed), downloaded on demand into a git-ignored `data/` folder and never committed; only derived numbers are in the repository. Any further real data should come from public sources (SAM.gov, SEC EDGAR) and never include non-public or employer data.
 
 ### Verify the claims (a reviewer's path)
 

@@ -90,3 +90,38 @@ def rid_pairs_to_positions(pairs: list[tuple[int, int]], rids: list[int]) -> set
     """
     pos = {r: i for i, r in enumerate(rids)}
     return {(min(pos[a], pos[b]), max(pos[a], pos[b])) for a, b in pairs}
+
+
+def bcubed_per_record(
+    labels: IntArray, ent: IntArray
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    """B-cubed precision and recall for every record.
+
+    For record r: precision = (records in r's cluster that share r's entity) / (size of r's cluster);
+    recall = (same count) / (size of r's entity). Unlike pairwise counts, an entity's weight grows
+    linearly with its number of records, so one very large entity cannot dominate the score.
+    """
+    _, lab = np.unique(labels, return_inverse=True)
+    lab = np.asarray(lab, dtype=np.int64).reshape(-1)
+    cluster_size = np.bincount(lab)[lab].astype(np.float64)
+    entity_size = np.bincount(ent)[ent].astype(np.float64)
+    joint = lab * (int(np.max(ent)) + 1) + ent
+    _, inv, cnt = np.unique(joint, return_inverse=True, return_counts=True)
+    same = cnt[np.asarray(inv).reshape(-1)].astype(np.float64)
+    return same / cluster_size, same / entity_size
+
+
+def bcubed_f1(
+    p_rec: npt.NDArray[np.float64],
+    r_rec: npt.NDArray[np.float64],
+    ent: IntArray | None = None,
+    w: npt.NDArray[np.float64] | None = None,
+) -> tuple[float, float, float]:
+    """Mean per-record precision and recall and their F1; `w[e]` optionally weights records by entity."""
+    weights = np.ones(len(p_rec)) if w is None or ent is None else w[ent]
+    total = float(weights.sum())
+    if total == 0.0:
+        return 1.0, 1.0, 1.0
+    p = float((weights * p_rec).sum() / total)
+    r = float((weights * r_rec).sum() / total)
+    return p, r, (2 * p * r / (p + r) if p + r else 0.0)

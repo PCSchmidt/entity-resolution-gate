@@ -92,3 +92,54 @@ def test_rid_pairs_to_positions_handles_non_contiguous_ids() -> None:
 
     rids = [13, 40, 7, 99]  # global ids, not row positions
     assert rid_pairs_to_positions([(40, 13), (99, 7)], rids) == {(0, 1), (2, 3)}
+
+
+def brute_bcubed(labels: list[int], ent: list[int]) -> tuple[float, float]:
+    n = len(labels)
+    ps, rs = [], []
+    for r in range(n):
+        cluster = [i for i in range(n) if labels[i] == labels[r]]
+        entity = [i for i in range(n) if ent[i] == ent[r]]
+        same = [i for i in cluster if ent[i] == ent[r]]
+        ps.append(len(same) / len(cluster))
+        rs.append(len(same) / len(entity))
+    return sum(ps) / n, sum(rs) / n
+
+
+@given(labels_st, st.data())
+def test_bcubed_matches_the_definition(labels: list[int], data: st.DataObject) -> None:
+    from entity_resolution_gate.evaluation import bcubed_f1, bcubed_per_record
+
+    ent = data.draw(st.lists(st.integers(0, 4), min_size=len(labels), max_size=len(labels)))
+    e = codes(ent)
+    p_rec, r_rec = bcubed_per_record(np.array(labels, dtype=np.int64), e)
+    p, r, _ = bcubed_f1(p_rec, r_rec)
+    bp, br = brute_bcubed(labels, ent)
+    assert abs(p - bp) < 1e-9 and abs(r - br) < 1e-9
+
+
+def test_bcubed_extremes_and_entity_weights() -> None:
+    from entity_resolution_gate.evaluation import bcubed_f1, bcubed_per_record
+
+    ent = np.array([0, 0, 0, 0, 1], dtype=np.int64)
+    p_rec, r_rec = bcubed_per_record(ent, ent)  # perfect clustering
+    assert bcubed_f1(p_rec, r_rec)[2] == 1.0
+    p_rec, r_rec = bcubed_per_record(np.arange(5, dtype=np.int64), ent)  # all singletons
+    p, r, _ = bcubed_f1(p_rec, r_rec)
+    assert p == 1.0 and abs(r - (4 * 0.25 + 1.0) / 5) < 1e-12
+    # a zero weight removes the big entity: only entity 1 remains and it is a singleton found perfectly
+    assert bcubed_f1(p_rec, r_rec, ent, np.array([0.0, 1.0]))[1] == 1.0
+
+
+def test_one_huge_entity_cannot_dominate_bcubed_the_way_it_dominates_pairwise() -> None:
+    from entity_resolution_gate.evaluation import bcubed_f1, bcubed_per_record
+
+    ent = np.array(
+        [0] * 100 + list(range(1, 11)), dtype=np.int64
+    )  # one entity of 100 records, ten singletons
+    labels = np.arange(110, dtype=np.int64)  # nothing merged
+    pairwise_recall = prf_counts(labels, ent)[1]
+    p_rec, r_rec = bcubed_per_record(labels, ent)
+    bcubed_recall = bcubed_f1(p_rec, r_rec)[1]
+    assert pairwise_recall == 0.0
+    assert bcubed_recall > 0.09  # the ten singletons are 9% of records and are recalled perfectly

@@ -1,0 +1,11 @@
+{
+ "exact": 0.0,
+ "fuzzy": 86.0,
+ "splink": 0.53,
+ "splink_rich": 0.9999,
+ "pipeline_base": 0.87,
+ "pipeline_squash": 0.87,
+ "pipeline_squash_first": 0.87,
+ "pipeline_squash_first_wide": 0.87,
+ "pipeline_token_sort": 0.75
+}

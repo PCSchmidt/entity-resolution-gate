@@ -28,6 +28,7 @@ def build(
     profile_rows: list[dict[str, object]],
     exclude: set[str] | None = None,
     split_name: str | None = None,
+    max_names: int | None = None,
 ) -> list[dict[str, object]]:
     names: dict[str, set[str]] = {}
     for row in profile_rows:
@@ -43,6 +44,10 @@ def build(
             if isinstance(n, str) and n.strip()
         }
         names.setdefault(uei, set()).update(found)
+    if (
+        max_names is not None
+    ):  # pass-through / aggregate registrants whose alias list is not name variants
+        names = {u: n for u, n in names.items() if len(n) <= max_names}
     out: list[dict[str, object]] = []
     for uei in sorted(names):
         for name in sorted(names[uei]):
@@ -69,6 +74,9 @@ def main() -> None:
         "--exclude-from", type=Path, default=None, help="profiles file whose UEIs are dropped"
     )
     ap.add_argument("--split-name", default=None, help="put every record in this single split")
+    ap.add_argument(
+        "--max-names", type=int, default=None, help="drop entities with more name strings than this"
+    )
     args = ap.parse_args()
     rows = [json.loads(line) for line in args.profiles.read_text(encoding="utf-8").splitlines()]
     exclude: set[str] | None = None
@@ -77,7 +85,7 @@ def main() -> None:
             json.loads(line) for line in args.exclude_from.read_text(encoding="utf-8").splitlines()
         ]
         exclude = {str(r["uei"]) for r in earlier if r.get("uei")}
-    records = build(rows, exclude, args.split_name)
+    records = build(rows, exclude, args.split_name, args.max_names)
     args.out.write_text("\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8")
     for s in sorted({str(r["split"]) for r in records}):
         part = [r for r in records if r["split"] == s]

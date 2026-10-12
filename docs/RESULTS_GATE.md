@@ -57,7 +57,7 @@ Rename recall tracks q squared (0.0625, 0.25, 1.0), as it should: a rename pair 
 ## What this does and does not show
 
 - **Shown:** where a verified identifier exists on a fraction of records, using it as certain evidence and as a hard veto improves entity resolution on real company names, consistently across slices; the improvement is mostly the positive evidence; the veto delivers a guarantee (zero rule-breaking clusters, tens of prevented false merges) and matters little for F1 unless the identifier is common; and a well-trained probabilistic model gets most of the F1 but not the guarantee.
-- **Not shown:** that this holds for tax IDs, US data or any real record collection (the visibility rate is simulated and the identifier is a company number); that the graph-splitting step (Louvain) matters, since I did not ablate it separately; or that the 0.5-point lead over a supervised Splink would survive a better-tuned Splink.
+- **Not shown:** that this holds for tax IDs, US data or any real record collection (the visibility rate is simulated and the identifier is a company number); that the graph-splitting step (Louvain) matters for F1 (it was ablated afterwards in [RESULTS_SPLIT.md](RESULTS_SPLIT.md): +0.0001 F1 at the tuned threshold, but it is what keeps the guarantee true); or that the 0.5-point lead over a supervised Splink would survive a better-tuned Splink.
 
 ## Deviations and forking paths
 

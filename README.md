@@ -72,7 +72,7 @@ Any similarity score can be fooled by two look-alike companies. A rule that hold
 | Measured (real UK company register, registry ID visible on 50% of records) | held-out B-cubed F1 0.928 for the full gate against 0.901 without the ID (+0.027, 95% interval +0.025 to +0.029); 0 clusters break the ID rule against 49; a supervised Splink gets within 0.5 points but with 29 rule-breaking clusters |
 | Speed | 39,369 records in 6.7 s on one machine, single thread |
 | Stack | Polars, DuckDB, NetworkX, RapidFuzz, jellyfish (Metaphone) |
-| Tests | 37, including property-based; `mypy --strict`; ruff |
+| Tests | 43, including property-based; `mypy --strict`; ruff |
 
 ## Architecture at a glance
 
@@ -133,7 +133,7 @@ uv venv && uv pip install -e ".[dev]"
 
 python examples/demo.py              # the output shown above
 python scripts/benchmark.py          # the held-out synthetic table below
-pytest -q                            # 37 passed
+pytest -q                            # 43 passed
 ```
 
 ```python
@@ -223,7 +223,7 @@ A third study ([docs/PROTOCOL_GATE.md](docs/PROTOCOL_GATE.md), written before an
 - **Name similarity alone does not beat linking nothing here** (tuned fuzzy matching is 0.003 below the no-merge row): most true pairs are renames and numbered-series lookalikes punish any loose threshold.
 - A supervised Splink gets within 0.5 points on F1, but with 1,349 wrongly merged pairs and 29 clusters that break the ID rule; an unsupervised one learned the wrong solution on this data and linked nothing.
 - The effect scales with how often the ID is visible (+0.007 at 25%, +0.027 at 50%; at 100% it is a ceiling), and the veto matters only when IDs are visible on both records of a lookalike pair.
-- **Limits:** the identifier is a company number, not a tax ID; the 50% visibility is simulated; it is UK live companies only; and I did not ablate the graph-splitting step separately.
+- **Limits:** the identifier is a company number, not a tax ID; the 50% visibility is simulated; it is UK live companies only; and the graph-splitting step is ablated separately ([docs/RESULTS_SPLIT.md](docs/RESULTS_SPLIT.md)): at the tuned threshold it adds only +0.0001 F1 but it is what makes the "never two IDs in a cluster" guarantee true (6 rule-breaking clusters without it) and it keeps the pipeline usable at looser thresholds (+0.20 F1 at threshold 0.80).
 
 ## Limitations
 
@@ -249,7 +249,7 @@ No keys. The synthetic benchmark data is generated from a seed. The USAspending 
 ### Verify the claims (a reviewer's path)
 
 ```bash
-pytest -q                         # 37 passed, includes the property test of the guarantee
+pytest -q                         # 43 passed, includes the property test of the guarantee
 mypy src tests scripts            # strict, clean
 python examples/demo.py           # the table and audit log shown at the top
 python scripts/benchmark.py       # the held-out synthetic table
@@ -262,6 +262,7 @@ The real-data study needs the `study` extra and a download from the public USAsp
 | Doc | What it covers |
 | --- | --- |
 | [docs/RESULTS_GATE.md](docs/RESULTS_GATE.md) | the registry-ID study on UK company data: results, criteria, dose-response, limits |
+| [docs/PROTOCOL_SPLIT.md](docs/PROTOCOL_SPLIT.md), [docs/RESULTS_SPLIT.md](docs/RESULTS_SPLIT.md) | the graph-splitting ablation on fresh slices: what the Louvain step does and does not buy |
 | [docs/PROTOCOL_GATE.md](docs/PROTOCOL_GATE.md) | its plan, written before any matcher ran, and the four deviations |
 | [docs/RESULTS_SAMPLE.md](docs/RESULTS_SAMPLE.md) | the random-sample real-data study: results, criteria, post-hoc checks, limits |
 | [docs/PROTOCOL_SAMPLE.md](docs/PROTOCOL_SAMPLE.md) | its plan, written before any sampled name was downloaded, and the four deviations |

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "entity-resolution-gate"
-version = "0.2.0"
+version = "0.3.0"
 description = "Entity resolution with graph-gated fusion: blocking, pairwise scoring, and hard deterministic constraints that no similarity score can override."
 readme = "README.md"
 requires-python = ">=3.11"

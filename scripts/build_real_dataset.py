@@ -5,6 +5,11 @@ answer key (`entity_id`) and is never a matcher input. Entities are split by a h
 appears in both splits.
 
     python scripts/build_real_dataset.py --profiles data/profiles_2024-01.jsonl --out data/real_records.jsonl
+
+For a fresh held-out month (docs/PROTOCOL_BLOCKING.md), drop every entity seen in an earlier month and put
+the rest in one split:
+
+    python scripts/build_real_dataset.py --profiles data/profiles_2024-07.jsonl --out data/heldout_2024-07.jsonl         --exclude-from data/profiles_2024-01.jsonl --split-name heldout
 """
 
 from __future__ import annotations
@@ -19,12 +24,18 @@ def split_of(uei: str) -> str:
     return "dev" if hashlib.sha256(uei.encode()).digest()[0] % 2 == 0 else "test"
 
 
-def build(profile_rows: list[dict[str, object]]) -> list[dict[str, object]]:
+def build(
+    profile_rows: list[dict[str, object]],
+    exclude: set[str] | None = None,
+    split_name: str | None = None,
+) -> list[dict[str, object]]:
     names: dict[str, set[str]] = {}
     for row in profile_rows:
         prof = row.get("profile")
         uei = row.get("uei")
         if not isinstance(prof, dict) or not isinstance(uei, str) or not uei:
+            continue
+        if exclude and uei in exclude:
             continue
         found = {
             n
@@ -39,7 +50,7 @@ def build(profile_rows: list[dict[str, object]]) -> list[dict[str, object]]:
                 {
                     "name": name,
                     "entity_id": uei,
-                    "split": split_of(uei),
+                    "split": split_name or split_of(uei),
                     "address": "",
                     "zip": None,
                     "tax_id": None,
@@ -54,11 +65,21 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--profiles", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument(
+        "--exclude-from", type=Path, default=None, help="profiles file whose UEIs are dropped"
+    )
+    ap.add_argument("--split-name", default=None, help="put every record in this single split")
     args = ap.parse_args()
     rows = [json.loads(line) for line in args.profiles.read_text(encoding="utf-8").splitlines()]
-    records = build(rows)
+    exclude: set[str] | None = None
+    if args.exclude_from is not None:
+        earlier = [
+            json.loads(line) for line in args.exclude_from.read_text(encoding="utf-8").splitlines()
+        ]
+        exclude = {str(r["uei"]) for r in earlier if r.get("uei")}
+    records = build(rows, exclude, args.split_name)
     args.out.write_text("\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8")
-    for s in ("dev", "test"):
+    for s in sorted({str(r["split"]) for r in records}):
         part = [r for r in records if r["split"] == s]
         print(f"{s}: {len(part)} records, {len({r['entity_id'] for r in part})} entities")
 

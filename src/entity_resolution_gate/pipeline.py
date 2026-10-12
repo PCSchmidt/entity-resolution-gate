@@ -22,18 +22,35 @@ def normalise(name: str) -> str:
     return " ".join(t for t in _TOKEN.findall(name.lower()) if t not in _LEGAL)
 
 
-def block_keys(name: str) -> set[str]:
+BLOCKING_MODES = ("base", "squash", "squash_first", "squash_first_wide")
+
+
+def block_keys(name: str, mode: str = "base") -> set[str]:
     """Token-pair keys (metaphone and 3-char prefix), so one typo still leaves a shared pair.
 
     Single-token keys are far too coarse at scale: they exceed the block-size cap and are skipped.
+    Every mode other than `base` only adds keys, so its candidate set is a superset of the baseline's:
+    `squash` adds keys on the name with spaces removed (spacing variants), `squash_first` also adds the
+    first token (a short name against a longer one), `squash_first_wide` also builds pairs from six tokens.
     """
-    toks = normalise(name).split()[:4]
+    if mode not in BLOCKING_MODES:
+        raise ValueError(f"unknown blocking mode {mode!r}")
+    norm = normalise(name)
+    toks = norm.split()[: 6 if mode == "squash_first_wide" else 4]
     keys: set[str] = set()
     if len(toks) == 1:
-        return {"m:" + jellyfish.metaphone(toks[0]), "p:" + toks[0][:3]}
-    for a, b in itertools.combinations(toks, 2):
-        keys.add(f"m:{jellyfish.metaphone(a)}|{jellyfish.metaphone(b)}")
-        keys.add(f"p:{a[:3]}|{b[:3]}")
+        keys = {"m:" + jellyfish.metaphone(toks[0]), "p:" + toks[0][:3]}
+    else:
+        for a, b in itertools.combinations(toks, 2):
+            keys.add(f"m:{jellyfish.metaphone(a)}|{jellyfish.metaphone(b)}")
+            keys.add(f"p:{a[:3]}|{b[:3]}")
+    if mode != "base":
+        squashed = norm.replace(" ", "")
+        if squashed:
+            keys.add("s:" + squashed)
+            keys.add("q:" + squashed[:6])
+    if mode in ("squash_first", "squash_first_wide") and toks:
+        keys.add("f:" + toks[0])
     return keys
 
 
@@ -44,6 +61,7 @@ class Config:
     min_density: float = 0.5  # components sparser than this look like chains, not entities
     w_name: float = 0.7
     w_addr: float = 0.3
+    blocking: str = "base"  # see block_keys; "base" reproduces the original behaviour
 
 
 @dataclass
@@ -55,7 +73,7 @@ class AuditLog:
 
 
 def candidate_pairs(df: pl.DataFrame, cfg: Config, log: AuditLog) -> list[tuple[int, int]]:
-    rows = [(r, k) for r, n in zip(df["rid"], df["name"], strict=True) for k in block_keys(n)]
+    rows = [(r, k) for r, n in zip(df["rid"], df["name"], strict=True) for k in block_keys(n, cfg.blocking)]
     keys = pl.DataFrame(rows, schema={"rid": pl.Int64, "k": pl.Utf8}, orient="row")
     con = duckdb.connect()
     con.register("keys", keys.to_arrow())
@@ -72,7 +90,7 @@ def candidate_pairs(df: pl.DataFrame, cfg: Config, log: AuditLog) -> list[tuple[
         """,
         [cfg.max_block_size],
     ).fetchall()
-    return [(int(a), int(b)) for a, b in pairs]
+    return sorted((int(a), int(b)) for a, b in pairs)  # fixed edge order: Louvain depends on it
 
 
 def pair_score(a: dict[str, Any], b: dict[str, Any], cfg: Config) -> float:

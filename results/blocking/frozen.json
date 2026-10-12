@@ -1,0 +1,10 @@
+{
+ "variant": "base",
+ "thresholds": {
+  "base": 0.9,
+  "squash": 0.9,
+  "squash_first": 0.9,
+  "squash_first_wide": 0.9
+ },
+ "fuzzy_t": 92.0
+}

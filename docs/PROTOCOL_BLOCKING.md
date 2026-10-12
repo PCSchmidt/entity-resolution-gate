@@ -72,4 +72,9 @@ Name-only data, one agency, contracts only; the July set will have a few hundred
 
 ## Deviations
 
-None yet.
+Made after the development stage and **before the fresh month (July) was scored**. Only January development numbers had been seen.
+
+1. **The selection rule chose `base`, so the held-out comparison is widened.** Development results: `base` 0.7424, `squash` 0.7473, `squash_first` 0.7473, `squash_first_wide` 0.7473 (F1 at threshold 0.90 for all); pair completeness on name-findable true pairs 0.883, 0.909, 0.956, 0.965; candidate pairs 3,201, 3,983, 13,501, 13,788. The near-tie rule picked `base`, but only by a margin of 0.0001 (0.7424 against a cut of 0.7423). With `base` chosen, the held-out step would compare the baseline with itself and say nothing. So the held-out run reports **every** variant against the baseline, each at its own development-tuned threshold (all 0.90), as pre-specified contrasts. Because that is three contrasts, a variant counts as improving F1 (K2) only if the entity-bootstrap **98.3% interval** (a Bonferroni correction for three) lies entirely above zero; the 95% interval is also shown. The default changes only if some variant meets that **and** passes K4 on the synthetic benchmark; otherwise the baseline stays. No variant is selected using July.
+2. **`frozen.json` also stores each variant's development threshold** (they were already in `dev_sweep.json`; nothing new was computed).
+3. **K4 (synthetic regression) is run for every non-baseline variant**, not only the chosen one, for the same reason.
+4. **Candidate pairs are now returned in sorted order (determinism fix).** Two consecutive development runs differed at thresholds of 0.82 or lower for the first-token variants, because DuckDB returns candidate pairs in arbitrary order and Louvain's split of large chained components depends on edge order even with a fixed seed. Sorting removes it. Results at the frozen threshold (0.90) were identical before and after, the variant choice did not change, and the published January test numbers and the synthetic benchmark reproduce exactly. A test pins the ordering.

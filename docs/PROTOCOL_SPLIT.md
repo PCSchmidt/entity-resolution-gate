@@ -54,4 +54,4 @@ One register (UK Companies House), where the registry ID is a company number and
 
 ## Deviations
 
-(none yet)
+1. **Fixed-threshold sensitivity rows added after the development stage and before any held-out scoring (2026-10-12).** Development tuning chose the threshold 0.99 for every variant (the same value the earlier gate study chose), at which the thresholded graph keeps only near-identical names, so the graph step has almost nothing to act on: development B-cubed F1 differs between the modes by at most 0.0002 (`P_full` q = 0.5: 0.9260 louvain, 0.9260 tax_only, 0.9258 none; `P_addr`: 0.8993 against 0.8992). I therefore also score all five variants on the held-out slices at **fixed, untuned thresholds 0.80 and 0.90** (q = 0.5 only), as descriptive rows that show what the step does when edges are plentiful. They are not hypotheses and are not used to choose anything. S1 to S4 are unchanged and still judged at the tuned thresholds.

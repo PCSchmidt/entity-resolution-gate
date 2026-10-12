@@ -20,8 +20,8 @@ from typing import Any
 
 import numpy as np
 import polars as pl
-
 import run_gate as rg
+
 from entity_resolution_gate.evaluation import IntArray
 from entity_resolution_gate.pipeline import Config, resolve
 
@@ -37,6 +37,9 @@ VARIANTS: list[tuple[str, str, str, tuple[float, ...]]] = [
     ("P_addr/louvain", "P_addr", "louvain", (PRIMARY_Q,)),
     ("P_addr/none", "P_addr", "none", (PRIMARY_Q,)),
 ]
+# Deviation 1 (docs/PROTOCOL_SPLIT.md): every tuned threshold is 0.99, where the thresholded graph has almost no
+# edges to split, so the same variants are also scored at fixed, untuned, looser thresholds (held-out, descriptive).
+FIXED_THRESHOLDS = (0.80, 0.90)
 
 
 def cfg_of(base: str, split: str, threshold: float) -> Config:
@@ -119,6 +122,14 @@ def run_heldout() -> None:
                 stats[key] = rg.slice_stats(sp, lab, sp.visible(q))
                 activity[key] = info
                 print(key, "done", flush=True)
+    for t in FIXED_THRESHOLDS:
+        with ProcessPoolExecutor(max_workers=12) as pool:
+            for name, base, split, qs in VARIANTS:
+                key = f"{name}@{PRIMARY_Q}@t{t}"
+                lab, info = labels(sp, pool, cfg_of(base, split, t), PRIMARY_Q)
+                stats[key] = rg.slice_stats(sp, lab, sp.visible(PRIMARY_Q))
+                activity[key] = info
+                print(key, "done", flush=True)
     res: dict[str, Any] = {"n_records": sp.n, "n_slices": n_sl, "frozen": frozen, "matchers": {}, "contrasts": {}, "split_activity": activity}
     for key, st in stats.items():
         boots = np.array([rg.metric(st, w, "b3_f1") for w in draws])
@@ -152,6 +163,12 @@ def run_heldout() -> None:
             "ref_P_full_tax_only_minus_none": contrast(f"P_full/tax_only@{q}", f"P_full/none@{q}"),
         }
         res["contrasts"][f"q={q}"] = c
+    for t in FIXED_THRESHOLDS:
+        res["contrasts"][f"fixed_threshold_{t}"] = {
+            "P_full_louvain_minus_none": contrast(f"P_full/louvain@{PRIMARY_Q}@t{t}", f"P_full/none@{PRIMARY_Q}@t{t}"),
+            "P_full_louvain_minus_tax_only": contrast(f"P_full/louvain@{PRIMARY_Q}@t{t}", f"P_full/tax_only@{PRIMARY_Q}@t{t}"),
+            "P_addr_louvain_minus_none": contrast(f"P_addr/louvain@{PRIMARY_Q}@t{t}", f"P_addr/none@{PRIMARY_Q}@t{t}"),
+        }
     res["contrasts"]["no_ids"] = {
         "S3_P_addr_louvain_minus_none_ci97_5": contrast(f"P_addr/louvain@{PRIMARY_Q}", f"P_addr/none@{PRIMARY_Q}", (1.25, 98.75))
     }

@@ -236,6 +236,15 @@ A third study ([docs/PROTOCOL_GATE.md](docs/PROTOCOL_GATE.md), written before an
 - **Not at scale.** No 100k+ run and no F1-versus-latency curve. Splink was compared only on the real-data study, with a fixed hand-set configuration, so that comparison says little about a tuned Splink.
 - **No embeddings or extra features** (executive names, geography, vector search) yet.
 
+## Known gaps against the original roadmap
+
+The project began as an item in a longer roadmap that named a larger stack and scope. These parts of that plan were **not built**; the results above say nothing about them.
+
+- BM25 or dense-embedding blocking, `pgvector`, and an embedding-distance feature: blocking uses phonetic and prefix token-pair keys in DuckDB.
+- Executive-name and geographic-proximity features, and Leiden clustering (Louvain is used).
+- A 100k+ record run and an F1-versus-latency curve.
+- Real tax IDs or CAGE codes: public data has none, so the UK company number stands in for a registry ID. SEC EDGAR EINs were not tried (the SEC requires a contact address in the User-Agent, which I did not supply); OpenCorporates was not used.
+
 ## Operational notes
 
 ### What runs where

@@ -31,6 +31,21 @@ def _ids_per_cluster(df: pl.DataFrame, split: str) -> list[set[str]]:
     return list(groups.values())
 
 
+def test_resolve_rejects_duplicate_rid() -> None:
+    # two records sharing a rid used to collapse into one node and could pair tax IDs X and Y in one cluster
+    df = _frame([{"name": "Alpha Trading", "tax_id": "X"}, {"name": "Alpha Trading", "tax_id": "Y"}])
+    df = df.with_columns(pl.lit(0).alias("rid"))
+    with pytest.raises(ValueError, match="unique"):
+        resolve(df, _cfg("louvain"))
+
+
+def test_resolve_rejects_null_rid() -> None:
+    df = _frame([{"name": "Alpha Trading"}, {"name": "Beta Foods"}])
+    df = df.with_columns(pl.when(pl.col("rid") == 1).then(None).otherwise(pl.col("rid")).alias("rid"))
+    with pytest.raises(ValueError, match="null"):
+        resolve(df, _cfg("louvain"))
+
+
 def _bridge() -> pl.DataFrame:
     # an untaxed record that looks like both registered companies chains them together
     return _frame(

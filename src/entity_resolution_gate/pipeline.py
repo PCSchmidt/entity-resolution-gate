@@ -168,6 +168,12 @@ def resolve(df: pl.DataFrame, cfg: Config | None = None) -> tuple[pl.DataFrame, 
     cfg = cfg or Config()
     if cfg.split not in SPLIT_MODES:
         raise ValueError(f"unknown split mode {cfg.split!r}")
+    # rid is the record key: a duplicate would silently merge two records' tax IDs into one node
+    if df["rid"].null_count():
+        raise ValueError("`rid` must not contain nulls")
+    if df["rid"].n_unique() != df.height:
+        dups = df.filter(df["rid"].is_duplicated())["rid"].unique().sort().head(5).to_list()
+        raise ValueError(f"`rid` must be unique; duplicated values include {dups}")
     log = AuditLog()
     rec = {int(r["rid"]): r for r in df.iter_rows(named=True)}
     tax = {rid: (r["tax_id"] if cfg.tax_veto else None) for rid, r in rec.items()}

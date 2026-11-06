@@ -16,7 +16,7 @@ Labels: **Confirmed** (seen in code, settings, tests, history) · **Ran it** (ru
 | Status | v0.3 portfolio prototype; tag and release v0.3.0 (2026-10-13) | Confirmed |
 | Size | `src/` 420 lines (pipeline 219, evaluation 127, synth 70, init 4); tests 544 lines in 5 files; scripts 2,260 lines in 14 files; docs 14,324 words in 11 files; 66 tracked files; 22 tracked result JSON files | Ran it (`wc`, `git ls-files`) |
 | Commits | 30 on `main`, 2026-10-09 16:53 to 2026-10-24 13:10 (-0400). Per day: 10-09 1, 10-10 1, 10-11 4, 10-12 18, 10-13 2, 10-14 1, 10-19 1, 10-24 2 | Ran it (`git log`) |
-| Commit credits | 28 "Claude Sonnet 5.5", 1 "Claude Opus 5.5 (1M context)" (`da904dd`), 1 none (`ad87f4f`, "Remove run logs"). All authored as Chris Schmidt. No other model credits. No agent instruction files tracked | Ran it |
+| Commit credits | 28 credits to one AI assistant model version, 1 to a second version (`da904dd`), 1 none (`ad87f4f`, "Remove run logs"). All authored as Chris Schmidt. No other model credits. No agent instruction files tracked | Ran it |
 | Tests | `pytest -q`: 45 passed, 0 failed, 0 skipped (8 s to 20 s). Per file 12 / 8 / 11 / 6 / 8. Nine Hypothesis property tests. Coverage 99% of 272 statements; misses `pipeline.py` 92, 146, 161 and `evaluation.py` 124 | Ran it |
 | Lint and types | `ruff check .` clean. `ruff format --check .`: 8 files would be reformatted. `mypy src tests` clean (9 files). `mypy src tests scripts` in a venv without the study extra: 8 errors in 3 files | Ran it |
 | CI | One job, ubuntu-latest, Python 3.12: install `.[dev]`, `mypy src tests`, `pytest -q`; on push and pull request. Latest runs green (including `5f17714` and `9e1b9a2`). No ruff, no scripts type-check, no benchmark or quality gate; `main` not protected | Confirmed; Ran it (`gh run list`, `gh api`) |
@@ -164,7 +164,7 @@ Counts as in E1. No `skip` or `xfail` anywhere; no test needs network, GPU, Dock
 2. `test_prf_counts_matches_brute_force`: compares the fast counting function with an enumerated implementation on random labels. Real.
 3. `test_missing_address_is_not_evidence`: the first assertion is real; the second compares against `pair_score(a, c, cfg) * 0 + 0.7 * name_only`, so the multiplied-by-zero term does nothing and the check is weaker than its name. `test_defaults_enable_everything` asserts two of three switches (`tax_blocking` defaults off).
 
-Who wrote the tests: commit credits show Claude on all test commits (Confirmed); whether the author edited them is Ask the author.
+Who wrote the tests: commit credits show an AI assistant model credit on all test commits (Confirmed); whether the author edited them is Ask the author.
 
 ---
 
@@ -180,7 +180,7 @@ Who wrote the tests: commit credits show Claude on all test commits (Confirmed);
 
 The order plan, settings, results holds in every row. Nothing shows the held-out data were untouched before the plan push (Ask the author). Several deviations are logged after development and before held-out scoring (Per the docs). Protocols GATE, SAMPLE and SPLIT carry a "What I knew before writing this" section; REAL and BLOCKING carry "My expectation, written down so it can be wrong" only.
 **Bulk commits:** `99f22c4` adds 7,440 lines by `numstat`, nearly all saved sweep and frozen files; `e3d4f6b` about 2,155; `6e0dd4f` about 1,228; `da904dd` about 1,316 (the earlier explainer). 18 of 30 commits fall on 2026-10-12, and the step-by-step history of that day is not recoverable (My reading).
-**Credits:** see E1. Author says (answers, 2026-11-05): probably only one tool was used; he does not name it here. This repository's evidence names only Claude models (Sonnet 5.5, Opus 5.5), not a tool or harness, so the explainer says "Claude models" and "AI coding agents" and names no build tool.
+**Credits:** see E1. Author says (answers, 2026-11-05): probably only one tool was used; he does not name it here. This repository's evidence names only AI assistant model credits, not a tool or harness, so the explainer says "AI assistant models" and "AI coding agents" and names no build tool.
 
 ---
 

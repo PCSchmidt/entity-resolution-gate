@@ -16,7 +16,7 @@ Labels: **Confirmed** (seen in code, settings, tests, history) · **Ran it** (ru
 | Status | v0.3 portfolio prototype; tag and release v0.3.0 (2026-10-13) | Confirmed |
 | Size | `src/` 420 lines (pipeline 219, evaluation 127, synth 70, init 4); tests 544 lines in 5 files; scripts 2,260 lines in 14 files; docs 14,324 words in 11 files; 66 tracked files; 22 tracked result JSON files | Ran it (`wc`, `git ls-files`) |
 | Commits | 30 on `main`, 2026-10-09 16:53 to 2026-10-24 13:10 (-0400). Per day: 10-09 1, 10-10 1, 10-11 4, 10-12 18, 10-13 2, 10-14 1, 10-19 1, 10-24 2 | Ran it (`git log`) |
-| Commit credits | 28 "Claude Sonnet 5.5", 1 "Claude Opus 5.5 (1M context)" (`da904dd`), 1 none (`ad87f4f`, "Remove run logs"). All authored as Chris Schmidt. No Copilot, Codex, Gemini or other credits. No agent instruction files tracked | Ran it |
+| Commit credits | 28 "Claude Sonnet 5.5", 1 "Claude Opus 5.5 (1M context)" (`da904dd`), 1 none (`ad87f4f`, "Remove run logs"). All authored as Chris Schmidt. No other model credits. No agent instruction files tracked | Ran it |
 | Tests | `pytest -q`: 45 passed, 0 failed, 0 skipped (8 s to 20 s). Per file 12 / 8 / 11 / 6 / 8. Nine Hypothesis property tests. Coverage 99% of 272 statements; misses `pipeline.py` 92, 146, 161 and `evaluation.py` 124 | Ran it |
 | Lint and types | `ruff check .` clean. `ruff format --check .`: 8 files would be reformatted. `mypy src tests` clean (9 files). `mypy src tests scripts` in a venv without the study extra: 8 errors in 3 files | Ran it |
 | CI | One job, ubuntu-latest, Python 3.12: install `.[dev]`, `mypy src tests`, `pytest -q`; on push and pull request. Latest runs green (including `5f17714` and `9e1b9a2`). No ruff, no scripts type-check, no benchmark or quality gate; `main` not protected | Confirmed; Ran it (`gh run list`, `gh api`) |
@@ -180,7 +180,7 @@ Who wrote the tests: commit credits show Claude on all test commits (Confirmed);
 
 The order plan, settings, results holds in every row. Nothing shows the held-out data were untouched before the plan push (Ask the author). Several deviations are logged after development and before held-out scoring (Per the docs). Protocols GATE, SAMPLE and SPLIT carry a "What I knew before writing this" section; REAL and BLOCKING carry "My expectation, written down so it can be wrong" only.
 **Bulk commits:** `99f22c4` adds 7,440 lines by `numstat`, nearly all saved sweep and frozen files; `e3d4f6b` about 2,155; `6e0dd4f` about 1,228; `da904dd` about 1,316 (the earlier explainer). 18 of 30 commits fall on 2026-10-12, and the step-by-step history of that day is not recoverable (My reading).
-**Credits:** see E1. Author says (AUTHOR_CONTEXT): Claude Code mostly, with Copilot, Codex and Prime-Agent across projects. This repository's evidence names only Claude models (Sonnet 5.5, Opus 5.5), not a tool or harness, so the explainer says "Claude models" and "AI coding agents".
+**Credits:** see E1. Author says (answers, 2026-11-05): probably only one tool was used; he does not name it here. This repository's evidence names only Claude models (Sonnet 5.5, Opus 5.5), not a tool or harness, so the explainer says "Claude models" and "AI coding agents" and names no build tool.
 
 ---
 
@@ -310,7 +310,7 @@ Placement: **Works locally.** Deployable is not reached: no hosted or packaged s
 
 ## E16. Review dispositions
 
-The review of the previous version (25 findings) was applied in the earlier rewrite, and this narrative rewrite carries those corrections (genuine-tie wording, the cap explanation, B-cubed baselines, "weighted approximation" for the bootstrap, Splink version unknown, no "AI mistake" claims without history). Not done in this run: the independent plain-language reader pass and the accuracy review (questionnaire passes 3 and 4); they remain to be run on the new text.
+The review of the previous version (25 findings) was applied in the earlier rewrite, and this narrative rewrite carries those corrections (genuine-tie wording, the cap explanation, B-cubed baselines, "weighted approximation" for the bootstrap, Splink version unknown, no "AI mistake" claims without history). Correction, 2026-11-05: the independent plain-language reader pass and the accuracy review have since been run for this guide (see `entity-resolution-gate.readercheck.md`, `entity-resolution-gate.readercheck2.md` and `entity-resolution-gate.review.md`); the earlier "not done" wording is superseded. The real-data studies are still not re-run, which stays a stated limitation.
 
 ---
 
@@ -366,3 +366,36 @@ Other wording changes: "guarantee" and "gain" replaced by statements of what was
 Images regenerated with a script kept outside the repo and outside this folder: `entity-resolution-gate-gate-results.png` (title now says the IDs are simulated and error-free; labels shortened; caption says axis starts at 0.89; values unchanged: 0.903, 0.901, 0.902, 0.927, 0.928, 0.923 and violations 0, 49, 0, 48, 0, 29) and `entity-resolution-gate-parts.png` (logbook box reworded as above). The demo, sample-results and learned-versus-rules images are unchanged because their numbers and labels did not change. Each regenerated image was viewed after rendering to check for clipped text.
 
 Not re-verified in this revision: the real-data numbers were carried over from v1 and the committed result files; no study was re-run.
+
+## Author answers folded in, 2026-11-05
+
+Source: answers appended to the 25 questions in `entity-resolution-gate.questions.md`. Label: Author says. Clone pulled (up to date). Guide edited; no repository change. Unsure, "do not recall", "defer to recommend" and "need refresher" answers are stated as such and left open.
+
+- Q1: Does not recall; probably support for Hard Power Intelligence or similar future work (hedged in the guide).
+- Q2: The supplier or contract-data analyst is not yet a real person or workflow; the guide calls it an illustration for now.
+- Q3: Unsure whether v0.3 is finished; time is not a concern; no backlog chosen.
+- Q4: Nobody else has run it or read the results. Stated.
+- Q5: The README sentence about defense and federal-contracting analysis is accurate; describing it as an interest is accurate. Kept.
+- Q6: Longer roadmap: unsure; probably a file at the top level of the folder holding the repo folders. Read-only check of that top level found `ai_engineering_project_roadmap_execution_template.md` (title "AI Engineering Portfolio Roadmap: Tactical & Calibrated Systems"). Its section 5, "Multi-Source Entity Resolution at Scale with Graph-Gated Fusion", matches the project: inspiration Hard Power Intelligence and Grey-Resolve; Metaphone blocking, Jaro-Winkler scoring, Louvain or Leiden partitioning, a hard veto when tax IDs contradict, an audit log, a Splink reference; a Month 3 slot. Whether this is the roadmap he means is not confirmed by him. The guide gives no path.
+- Q7: Target identifiers (US tax numbers, others, or the UK company number stand-in): defers to a recommendation.
+- Q8: Unsure who chose the one hard rule; credit wording removed from the guide.
+- Q9: Unsure why ID shortlisting is off by default.
+- Q10: The 40%-no-ID text versus the generator (60% of entities get an ID, shown on 80% of their records): he wants whatever is most accurate. Finding stated; no decision beyond that.
+- Q11: His description of the data is "open source information" (Companies House snapshot, USAspending). Licence terms were not checked in the explainer work; no licence statement beyond "research only" is in the repository.
+- Q12: Unsure where 0.93, 0.7/0.3 and density below 0.5 came from.
+- Q13: Unsure why Splink and whether a better-tuned Splink was tried.
+- Q14: Needs a refresher on Jaro-Winkler, B-cubed, the bootstrap and Louvain.
+- Q15: Unsure whether held-out data were untouched before each plan was pushed, and who found the pilot's sampling flaw.
+- Q16: Read some committed result files; mostly relied on agent summaries.
+- Q17: No remembered case of an agent claiming something worked wrongly.
+- Q18: All tests are agent-written.
+- Q19: Deployment or packaging: defers to a recommendation.
+- Q20: First change: defers to a recommendation.
+- Q21: Whether to correct the README's "single-threaded" and "unrelated to the algorithm": defers to a recommendation.
+- Q22: Probably only one tool. Guide says only "AI coding agents"; build-tool names scrubbed from the guide and from E1 and E8 above.
+- Q23: Overrode an agent or caught a wrong claim "sometimes"; no case given.
+- Q24: All of it needs a refresher for him. Stated plainly, without blame.
+- Q25: He wants the model or agent to write in his voice. The first-person README and protocol sentences (for example "my expectation, written down so it can be wrong") were drafted by the AI coding agents in his voice at his wish; guide now says so; the README sentences stay.
+- Closing note 1: real-data studies still not re-run; limitation kept.
+- Closing note 2: reader pass and accuracy review have been run (see E16 correction).
+- Wording: removed "I built", "I directed the scope, plan, architecture and preferences", "What I decided", "I can direct AI coding agents toward a result I can defend", "Set the question, the plan and the rules of measurement", "nothing shows that anyone but me has used it", "None is shown to exist beyond me".
